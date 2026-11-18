@@ -21,7 +21,6 @@ import type {
 } from "../../types/svelte-components";
 import FlashcardReviewModal from "./FlashcardReviewModal.svelte";
 import { mount, unmount } from "svelte";
-import { reviewRepairProps, type ReviewRepairHooks } from "./review-repair-props";
 import { navigateToFlashcardSource } from "../../utils/flashcard-navigator";
 import { wireInternalLinks } from "../../utils/internal-links";
 import { renderableCardMarkdown, renderSourcePath, directoryEmbedUrl } from "../../services/directory-render";
@@ -58,8 +57,7 @@ export class FlashcardReviewView extends ItemView {
     leaf: WorkspaceLeaf,
     scheduler: Scheduler,
     settings: DecksSettings,
-    db: IDatabaseService,
-    private repairHooks?: ReviewRepairHooks
+    db: IDatabaseService
   ) {
     super(leaf);
     this.scheduler = scheduler;
@@ -283,7 +281,6 @@ export class FlashcardReviewView extends ItemView {
     this.component = mount(FlashcardReviewModal, {
       target: contentEl,
       props: {
-        ...reviewRepairProps(this.repairHooks),
         isActive: () =>
           this.app.workspace.getActiveViewOfType(FlashcardReviewView) === this &&
           !activeDocument.querySelector(".modal-container"),

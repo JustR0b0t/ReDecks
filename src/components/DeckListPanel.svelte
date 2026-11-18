@@ -121,9 +121,7 @@
   export let openAnkiImportModal: () => void = () => {};
   export let openDeckConfigModal: (deck: DeckWithProfile) => void;
   export let openFlashcardManager: () => void;
-  export let openAiWorkbench: () => void = () => {};
   export let openDirectoryBrowser: () => void = () => {};
-  export let aiEnabled = false;
   export let customDeckService: CustomDeckService;
   export let deckTag = "#decks";
   // Synced via data.json — pin/unpin on one device shows up on all others
@@ -228,12 +226,6 @@
     const next = allCollapsed ? [] : branchIds;
     collapsedIds = new Set(next);
     void onSetCollapsedIds(next);
-  }
-
-  // Push the AI-enabled toggle in after a settings change so the generate
-  // button enables/disables without remounting the panel.
-  export function updateAiEnabled(enabled: boolean): void {
-    aiEnabled = enabled;
   }
 
   /**
@@ -1563,15 +1555,6 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
         </button>
       {/if}
-      <button
-        class="clickable-icon"
-        on:click={() => openAiWorkbench()}
-        disabled={!aiEnabled}
-        title={t.commands.openAiWorkbench}
-        aria-label={t.commands.openAiWorkbench}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"></path><path d="M15 16v-2"></path><path d="M8 9h2"></path><path d="M20 9h2"></path><path d="M17.8 11.8 19 13"></path><path d="M15 9h.01"></path><path d="M17.8 6.2 19 5"></path><path d="m3 21 9-9"></path><path d="M12.2 6.2 11 5"></path></svg>
-      </button>
       <button
         class="clickable-icon"
         on:click={() => openDirectoryBrowser()}

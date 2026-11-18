@@ -22,7 +22,8 @@ import {
 import { Logger, formatTime } from "../utils/logging";
 import { FileFilter } from "../utils/fileFilter";
 import { noteDeckTag } from "../utils/deck-tag";
-import { FlashcardParser, type ParsedFlashcard } from "@decks/core";
+import { FlashcardParser, parseHeaderLevels, type ParsedFlashcard } from "@decks/core";
+import { DeckBlockParser } from "./DeckBlockParser";
 import { ProgressTracker } from "../utils/progress";
 import { TagGroupService, tagScopeFromSettings, studyTagsFor } from "@decks/core";
 import type { DecksSettings } from "../settings";
@@ -498,6 +499,19 @@ export class DeckManager {
       const fileTags = parseFrontMatterTags(fileMeta?.frontmatter ?? null) ?? [];
       await this.db.setDeckFileTags(deck.id, fileTags);
 
+      // Markdown notes are parsed block by block (#alldeck … #enddeck); the
+      // synchronizer derives ids and keeps scheduling as before. An empty read
+      // is left to the synchronizer so its empty-file safety still applies.
+      const preParsed =
+        !deck.filepath.toLowerCase().endsWith(".canvas") && fileContent.trim() !== ""
+          ? DeckBlockParser.parse(
+              fileContent,
+              parseHeaderLevels(deck.profile),
+              fileTitle,
+              deck.profile.examEnabled ?? false
+            )
+          : undefined;
+
       const result = await this.db.syncFlashcardsForDeck(
         {
           deckId: deck.id,
@@ -509,6 +523,7 @@ export class DeckManager {
           reverseCards,
           clozeEnabled: deck.profile.clozeEnabled,
           examEnabled: deck.profile.examEnabled ?? false,
+          ...(preParsed ? { preParsed } : {}),
         },
         progressCallback
       );

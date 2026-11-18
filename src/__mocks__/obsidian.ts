@@ -400,12 +400,6 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return Buffer.from(buffer).toString("base64");
 }
 
-// Tests that exercise PDF parsing inject their own fake document; this stub just
-// satisfies the import so modules referencing it load.
-export async function loadPdfJs(): Promise<unknown> {
-  throw new Error("loadPdfJs is not available in tests");
-}
-
 export interface RequestUrlResponse {
   status: number;
   text: string;

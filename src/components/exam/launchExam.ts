@@ -13,7 +13,6 @@ import type { DeckOrGroup, Flashcard } from "@/database/types";
 import type { DecksSettings } from "@/settings";
 import type { IDatabaseService } from "@/database/DatabaseFactory";
 import { ExamSetupModal } from "./ExamSetupModal";
-import { meaningGradingAvailable } from "../../services/AiGradingController";
 
 export interface ExamLaunchContext {
   app: App;
@@ -45,7 +44,11 @@ export async function launchExamForSelection(
     for (const card of cards) {
       examEnabledByDeckId.set(card.deckId, examDeckIds.has(card.deckId));
     }
-    const configured: ExamSettings = profile?.examSettings ?? ctx.settings.exam;
+    const stored: ExamSettings = profile?.examSettings ?? ctx.settings.exam;
+    // "By meaning" grading needed the removed AI features; such profiles fall
+    // back to self-grading, which is what it did when no AI was available.
+    const configured: ExamSettings =
+      stored.typedGrading === "meaning" ? { ...stored, typedGrading: "self" } : stored;
     const showClozeContext = (profile?.clozeShowContext ?? "open") === "open";
 
     const pool = buildExamSetupPool(
@@ -110,7 +113,6 @@ export async function launchExamForSelection(
           )
         );
       },
-      meaningGradingAvailable(ctx.settings),
       pool.needsSelfGrading ? I18n.t.exam.needsSelfGrading : null
     ).open();
   } catch (error) {

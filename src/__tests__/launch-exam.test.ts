@@ -103,7 +103,7 @@ describe("starting an exam whose typed answers are too long to check", () => {
     const { setup } = await launch([card("header-paragraph", LONG), card("header-paragraph", LONG)], "exact");
     expect(Notice).not.toHaveBeenCalled();
     expect(setup).toBeDefined();
-    const [, , eligible, skipped, initial, , , note] = setup!;
+    const [, , eligible, skipped, initial, , note] = setup!;
     expect(eligible).toBe(2);
     expect(skipped).toBe(0);
     expect(initial.typedGrading).toBe("self");
@@ -127,7 +127,7 @@ describe("starting an exam whose typed answers are too long to check", () => {
 
   it("keeps the profile's grading and adds no note when something is gradable", async () => {
     const { setup } = await launch([card("header-paragraph", LONG), card("header-paragraph", "Argon")], "exact");
-    const [, , eligible, skipped, initial, , , note] = setup!;
+    const [, , eligible, skipped, initial, , note] = setup!;
     expect([eligible, skipped]).toEqual([1, 1]);
     expect(initial.typedGrading).toBe("exact");
     expect(note).toBeNull();
@@ -137,5 +137,14 @@ describe("starting an exam whose typed answers are too long to check", () => {
     const { setup } = await launch([card("image-occlusion", "")], "exact");
     expect(setup).toBeUndefined();
     expect(Notice).toHaveBeenCalledWith(I18n.t.exam.noQuestions);
+  });
+});
+
+describe("a profile still set to the removed AI grading by meaning", () => {
+  it("opens the setup self-graded", async () => {
+    const { setup } = await launch([card("header-paragraph", "Argon")], "meaning");
+    expect(setup).toBeDefined();
+    const [, , , , initial] = setup!;
+    expect(initial.typedGrading).toBe("self");
   });
 });

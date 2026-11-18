@@ -12,7 +12,6 @@ import {
   type ResponsiveModalHandle,
 } from "../../utils/responsive-modal";
 import FlashcardExamModal from "./FlashcardExamModal.svelte";
-import { examMissProps, type ExamMissHooks } from "./exam-miss-props";
 
 type ExamComponent = ReturnType<typeof mount>;
 
@@ -99,8 +98,7 @@ export class ExamModalWrapper extends Modal {
     private deckName: string,
     private db: IDatabaseService,
     private onRetake: () => void,
-    private refreshStats: () => Promise<void>,
-    private missHooks?: ExamMissHooks
+    private refreshStats: () => Promise<void>
   ) {
     super(app);
   }
@@ -140,7 +138,6 @@ export class ExamModalWrapper extends Modal {
     this.component = mount(FlashcardExamModal, {
       target: contentEl,
       props: {
-        ...examMissProps(this.db, this.missHooks),
         attempt: this.attempt,
         deckName: this.deckName,
         renderMarkdown: this.renderMarkdown,

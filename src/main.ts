@@ -9,15 +9,12 @@ import {
   MarkdownRenderer,
   MarkdownView,
   getAllTags,
-  getLanguage,
   type CachedMetadata,
   type Editor,
 } from "obsidian";
 import type { Extension } from "@codemirror/state";
 import { decksHideAnchorTokens } from "./editor/hide-anchor-tokens";
-import { openVaultPdf } from "./utils/pdf-open";
 import { clozeMarkRole } from "./utils/cloze-marks";
-import { AiSourcePdfStore } from "./services/AiSourcePdfStore";
 import { DirectoryService, directoryErrorMessage } from "./services/DirectoryService";
 import { isFreshInstall } from "./utils/first-install";
 import { noteDeckTag } from "./utils/deck-tag";
@@ -70,12 +67,10 @@ import { SyncLog } from "./services/SyncLog";
 import {
   APP_DB_PATH,
   legacyDefaultFolders,
-  resolveAiSourcesFolder,
   resolveDbPath,
   resolveBackupFolder,
   resolveDirectoryMediaFolder,
   resolveSyncLogFolder,
-  resolvePdfCacheFolder,
 } from "./utils/paths";
 import { relocateFolder } from "./utils/relocate-folder";
 import { PeerAppDatabase } from "./services/PeerAppDatabase";
@@ -84,50 +79,11 @@ import { BackupService } from "./services/BackupService";
 import { StatisticsService } from "@decks/core";
 import { FlashcardWriter, type FlashcardEdits } from "./services/FlashcardWriter";
 import { FlashcardEditModalWrapper } from "./components/FlashcardEditModalWrapper";
-import { stagedCardsFromSnapshot } from "./services/ai-session-rows";
-import { AiChatService, AiConceptService, AiCritiqueService, AiGenerationService, AiGradingService, AiMatchService, buildExamPool, heldByOtherDecks, fixedCard, fixFields, missesSessionPrompt, mixFromPool, ocrSentinelForTier, pageMarker, type QuestionMix, type TypedGradingMode, AiRefactoringService, type CritiqueCard, type GeneratedCard, type GeneratedCardType, buildConceptRows, generateDeckId, hubTotals, I18n, localRowId, sourceDisplayName, type AiSession, type AiStagedCard, partitionAgainstDeck, type RefactorFieldSet, resolveCardTemplate, yieldToUI, OcclusionV2Parser, type OcclusionDoc, OCCLUSION_V2_VERSION, isOcclusionV2, parseOcclusionBack } from "@decks/core";
-import { AiKeyStore } from "./services/AiKeyStore";
-import { DecksProAuth } from "./services/DecksProAuth";
 import { ObsidianHttpClient } from "./services/ObsidianHttpClient";
-import {
-  AiRefactorController,
-  cardToRefactorFieldSet,
-  fieldSetToEdits,
-} from "./services/AiRefactorController";
-import { AiChatController } from "./services/AiChatController";
-import { AiConceptController } from "./services/AiConceptController";
-import { AiCritiqueController } from "./services/AiCritiqueController";
-import { AiGradingController } from "./services/AiGradingController";
-import { AiMatchController } from "./services/AiMatchController";
-import {
-  AiWorkbenchView,
-  VIEW_TYPE_AI_WORKBENCH,
-  type AiWorkbenchData,
-  type AiWorkbenchGap,
-  type TriageAction,
-} from "./components/AiWorkbenchView";
-import { buildModelOptions } from "./utils/ai-model-options";
-import type {
-  AiSessionRestore,
-  AiSessionSnapshot,
-} from "./components/ai-generator-types";
-import { AiGeneratorController } from "./services/AiGeneratorController";
-import { PdfOcrCache } from "@decks/core";
-import { ObsidianFileStore } from "./services/ObsidianFileStore";
-import { buildSectionContent, hashPdf, loadPdf, renderPageImage } from "./utils/pdf";
-import { buildAiConfig } from "./services/ai-config";
-import { FlashcardComposer } from "./services/FlashcardComposer";
-import { AiBatchRefactorModalWrapper } from "./components/AiBatchRefactorModalWrapper";
-import type { AiGeneratorOptions, AiSessionSeed } from "./components/ai-generator-types";
-import {
-  AiGeneratorView,
-  VIEW_TYPE_AI_GENERATOR,
-} from "./components/AiGeneratorView";
-import type { GeneratorSaveRequest } from "./components/generator-save";
+import { generateDeckId, I18n, resolveCardTemplate, yieldToUI, OcclusionV2Parser, type OcclusionDoc, OCCLUSION_V2_VERSION, isOcclusionV2, parseOcclusionBack } from "@decks/core";
 import type { Flashcard } from "./database/types";
 import { Logger, formatTime } from "./utils/logging";
 import { ProgressTracker } from "./utils/progress";
-import { resolveModelId } from "./utils/ai-model-options";
 
 import { type DecksSettings, DEFAULT_SETTINGS } from "./settings";
 import { DecksSettingTab } from "./components/settings/SettingsTab";
@@ -156,14 +112,6 @@ import {
   VIEW_TYPE_FLASHCARD_REVIEW,
 } from "./components/review/FlashcardReviewView";
 import { ExamView, VIEW_TYPE_FLASHCARD_EXAM } from "./components/exam/ExamView";
-import type { ExamMissHooks } from "./components/exam/exam-miss-props";
-import {
-  type CardSource,
-  type ReviewRepairHooks,
-  repairTargets,
-  resolveCardSource,
-} from "./components/review/review-repair-props";
-import { questionFronts, refactorAsNote } from "./utils/reverse-card";
 
 export const VIEW_TYPE_DECKS = "decks-view";
 export { VIEW_TYPE_FLASHCARD_REVIEW, VIEW_TYPE_FLASHCARD_MANAGER };
@@ -228,22 +176,8 @@ export default class DecksPlugin extends Plugin {
   private statisticsService: StatisticsService;
   private customDeckService: CustomDeckService;
   private flashcardWriter: FlashcardWriter;
-  private flashcardComposer: FlashcardComposer;
-  public aiKeyStore: AiKeyStore;
-  public decksProAuth: DecksProAuth;
-  /** Kept so the Decks Pro sign-in hand-off can repaint the panel. */
-  private settingTab: DecksSettingTab | null = null;
-  public aiRefactorController: AiRefactorController;
-  public aiGeneratorController: AiGeneratorController;
-  public aiCritiqueController: AiCritiqueController;
-  public aiGradingController: AiGradingController;
-  public aiMatchController: AiMatchController;
-  public aiConceptController: AiConceptController;
-  public aiChatController: AiChatController;
-  private aiSourcePdfs: AiSourcePdfStore;
   private directoryService: DirectoryService;
   private freshInstall = false;
-  public pdfOcrCache: PdfOcrCache;
   public settings: DecksSettings;
   private logger: Logger;
   private progressTracker: ProgressTracker;
@@ -262,10 +196,6 @@ export default class DecksPlugin extends Plugin {
   // Coalesce rapid-fire vault `modify` events (Obsidian autosaves every ~1-2s
   // during typing) into one trailing-edge sync per deck after the user pauses.
   private pendingDeckSyncs = new Map<string, number>();
-  /** Options for the generator leaf being opened; the view takes them in setState. */
-  private pendingGeneratorOptions: AiGeneratorOptions | null = null;
-  private aiStatusEl: HTMLElement | null = null;
-  private aiStatusTimer: number | null = null;
   private static readonly FILE_MODIFY_DEBOUNCE_MS = 3000;
 
   // Coalesce bursts of `create` events (bulk file creation / import) into a
@@ -285,9 +215,9 @@ export default class DecksPlugin extends Plugin {
     // Load settings first
     await this.loadSettings();
 
-    // Resolve the active UI language before any view, command, or notice is registered.
-    // Pass Obsidian's UI language into core's platform-agnostic resolver.
-    I18n.init(this.settings, getLanguage());
+    // English is the only UI language; initialise strings before any view,
+    // command, or notice is registered.
+    I18n.init(this.settings);
 
     // Initialize utilities
     const pluginFolderName = this.manifest.dir?.split('/').pop() || this.manifest.id;
@@ -355,11 +285,9 @@ export default class DecksPlugin extends Plugin {
         } catch (error) {
           this.logger.debug("startup replayOwnLog failed", error);
         }
-        let caughtUp = true;
         try {
           await this.syncLog.applyPending();
         } catch (error) {
-          caughtUp = false;
           this.logger.debug("startup applyPending failed", error);
         }
         // After applyPending, so the app's reviews are here when its directory decks arrive.
@@ -385,9 +313,6 @@ export default class DecksPlugin extends Plugin {
           this.logger.debug("startup compact failed", error);
         }
         this.syncLog.announce();
-        this.scheduleAiStatus();
-        // Another device's sessions must have arrived before their copies can count as strays.
-        if (caughtUp) void this.pruneAiSourcePdfs();
         // One-time cleanup of orphaned cards left behind by deck deletions that
         // ran without FK cascade enforcement. Keys on the (authoritative) decks
         // table, so it only removes cards whose deck row is genuinely gone;
@@ -489,52 +414,7 @@ export default class DecksPlugin extends Plugin {
       this.customDeckService = new CustomDeckService(this.db);
       this.flashcardWriter = new FlashcardWriter(this.app);
 
-      // AI refactoring. API keys live in a non-synced file under the plugin
-      // dir (AiKeyStore) — never in data.json. HTTP goes through Obsidian's
-      // requestUrl (ObsidianHttpClient) to bypass CORS.
-      this.aiKeyStore = new AiKeyStore(adapter, pluginDir);
-      this.decksProAuth = new DecksProAuth(
-        this.aiKeyStore,
-        () => this.settings.ai,
-        this.logger,
-        () => this.saveSettings(),
-      );
-      this.aiRefactorController = new AiRefactorController(
-        new AiRefactoringService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-      );
-      this.aiGeneratorController = new AiGeneratorController(
-        new AiGenerationService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-      );
-      this.aiCritiqueController = new AiCritiqueController(
-        new AiCritiqueService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-      );
-      this.aiGradingController = new AiGradingController(
-        new AiGradingService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-      );
-      this.aiMatchController = new AiMatchController(
-        new AiMatchService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-        this.db,
-      );
-      this.aiConceptController = new AiConceptController(
-        new AiConceptService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-      );
       await this.relocateLegacyFolders(pathCtx);
-      this.aiSourcePdfs = new AiSourcePdfStore(
-        this.app.vault.adapter,
-        resolveAiSourcesFolder(this.settings.paths),
-      );
       this.directoryService = new DirectoryService(
         adapter,
         resolveDirectoryMediaFolder(this.settings.paths),
@@ -546,23 +426,6 @@ export default class DecksPlugin extends Plugin {
       void this.dbPostInit
         .then(() => this.directoryService.pruneUnusedMedia())
         .catch((error: Error) => this.logger.debug("Directory media prune failed", error));
-      this.aiChatController = new AiChatController(
-        new AiChatService(new ObsidianHttpClient(), this.logger),
-        this.settings,
-        this.aiKeyStore,
-      );
-      // PDF → OCR text cache for the generator's two-stage PDF pipeline. Folder
-      // resolved on demand so a settings change takes effect without a restart.
-      this.pdfOcrCache = new PdfOcrCache(
-        new ObsidianFileStore(this.app),
-        () => resolvePdfCacheFolder(this.settings.paths),
-        () => buildAiConfig(this.settings, this.aiKeyStore),
-        new ObsidianHttpClient(),
-        renderPageImage,
-        this.logger,
-      );
-      this.flashcardComposer = new FlashcardComposer(this.app);
-
       // Apply current filter compile thresholds (leech / dense) to db + service
       this.applyFilterCompileOptions();
 
@@ -617,11 +480,7 @@ export default class DecksPlugin extends Plugin {
             this.logger,
             () => this.saveSettings(),
             (card) => this.openEditFlashcardModal(card),
-            (cards) => this.openBatchRefactorModal(cards),
-            () => void this.openAiWorkbench(),
             () => this.openAnkiImportModal(),
-            this.examMissHooks(),
-            this.reviewRepairHooks(),
             () => this.openDirectoryBrowser(),
           )
       );
@@ -634,15 +493,14 @@ export default class DecksPlugin extends Plugin {
             leaf,
             this.scheduler,
             this.settings,
-            this.db,
-            this.reviewRepairHooks()
+            this.db
           )
       );
 
       // Register the exam tab view
       this.registerView(
         VIEW_TYPE_FLASHCARD_EXAM,
-        (leaf) => new ExamView(leaf, this.db, this.examMissHooks())
+        (leaf) => new ExamView(leaf, this.db)
       );
 
       // Register the flashcard manager tab view
@@ -657,46 +515,6 @@ export default class DecksPlugin extends Plugin {
           ),
       );
 
-      // The workbench's pile in the status bar; it opens the hub.
-      this.aiStatusEl = this.addStatusBarItem();
-      this.aiStatusEl.addClass("decks-ai-status");
-      this.aiStatusEl.hide();
-      this.aiStatusEl.onClickEvent(() => void this.openAiWorkbench());
-
-      // Options at construction, not after setViewState, so Obsidian can
-      // restore the leaf with the workspace.
-      this.registerView(
-        VIEW_TYPE_AI_WORKBENCH,
-        (leaf) =>
-          new AiWorkbenchView(leaf, {
-            load: () => this.loadAiWorkbench(),
-            onOpenSession: (id) => this.openAiGeneratorModal(id),
-            onNewSession: () => this.openAiGeneratorModal(),
-            setArchived: (id, archived) =>
-              // Archiving must not float the session back to the top of the
-              // hub, so the touch is suppressed.
-              this.db.updateAiSession(id, { archived }, { touch: false }),
-            triage: (card, action) => this.triageAiCard(card, action),
-            onGenerateGap: (gap) => this.openGapSession(gap),
-            setModel: (id) => this.setAiModel(id),
-          }),
-      );
-
-      // Register the AI generator tab view
-      this.registerView(
-        VIEW_TYPE_AI_GENERATOR,
-        (leaf) =>
-          new AiGeneratorView(
-            leaf,
-            () => {
-              const pending = this.pendingGeneratorOptions;
-              this.pendingGeneratorOptions = null;
-              return pending;
-            },
-            (sessionId) => this.buildAiGeneratorOptions(sessionId ?? undefined),
-          ),
-      );
-
       // Register the release notes tab view
       this.registerView(
         VIEW_TYPE_RELEASE_NOTES,
@@ -708,11 +526,6 @@ export default class DecksPlugin extends Plugin {
       this.registerHoverLinkSource("decks", {
         display: "Decks",
         defaultMod: true,
-      });
-
-      // Sign-in hand-off from the website: obsidian://decks-auth?state=..&code=..
-      this.registerObsidianProtocolHandler("decks-auth", (params) => {
-        void this.completeProSignIn(params.state, params.code);
       });
 
       // Deck directory hand-off: obsidian://decks-import?deck=<slug>&ticket=<t>
@@ -735,11 +548,7 @@ export default class DecksPlugin extends Plugin {
           () => this.getDecksView(),
           () => this.saveSettings(),
           (card) => this.openEditFlashcardModal(card),
-          (cards) => this.openBatchRefactorModal(cards),
-          () => void this.openAiWorkbench(),
           () => this.openAnkiImportModal(),
-          this.examMissHooks(),
-          this.reviewRepairHooks(),
           () => this.openDirectoryBrowser(),
         ).open();
       });
@@ -790,24 +599,6 @@ export default class DecksPlugin extends Plugin {
           );
         })
       );
-
-      // Add command to open the AI workbench hub
-      this.addCommand({
-        id: "open-ai-workbench",
-        name: I18n.t.commands.openAiWorkbench,
-        callback: () => {
-          void this.openAiWorkbench();
-        },
-      });
-
-      // Add command to open the AI flashcard generator
-      this.addCommand({
-        id: "open-ai-generator",
-        name: I18n.t.commands.openAiGenerator,
-        callback: () => {
-          this.openAiGeneratorModal();
-        },
-      });
 
       // Insert an image-occlusion block at the cursor and open the studio.
       this.addCommand({
@@ -894,7 +685,6 @@ export default class DecksPlugin extends Plugin {
               void this.saveSettings();
             },
             (card) => this.openEditFlashcardModal(card),
-            (cards) => this.openBatchRefactorModal(cards),
           );
         },
       });
@@ -1062,11 +852,7 @@ export default class DecksPlugin extends Plugin {
             () => this.getDecksView(),
             () => this.saveSettings(),
             (card) => this.openEditFlashcardModal(card),
-            (cards) => this.openBatchRefactorModal(cards),
-            () => void this.openAiWorkbench(),
             undefined,
-            this.examMissHooks(),
-            this.reviewRepairHooks(),
             () => this.openDirectoryBrowser(),
           ).open();
         },
@@ -1299,10 +1085,8 @@ export default class DecksPlugin extends Plugin {
         };
       });
 
-      // Add settings tab. The reference is kept so the Decks Pro sign-in
-      // hand-off can repaint it: the browser round-trip finishes outside the
-      // settings UI, which would otherwise keep showing "signed out".
-      this.settingTab = new DecksSettingTab(
+      // Add settings tab
+      this.addSettingTab(new DecksSettingTab(
           this.app,
           this,
           this.settings,
@@ -1325,8 +1109,7 @@ export default class DecksPlugin extends Plugin {
           this.db.purgeDatabase.bind(this.db),
           this.backupService,
           () => this.resyncTemplates()
-      );
-      this.addSettingTab(this.settingTab);
+      ));
 
       // Setup database file watcher
       this.setupDatabaseWatcher();
@@ -1341,7 +1124,6 @@ export default class DecksPlugin extends Plugin {
   }
 
   onunload() {
-    if (this.aiStatusTimer !== null) window.clearTimeout(this.aiStatusTimer);
     setDirectoryRenderer(null);
     this.logger.debug("Unloading Decks plugin");
 
@@ -1388,10 +1170,16 @@ export default class DecksPlugin extends Plugin {
       }
     }
 
-    // The generator is a leaf now; without this the settings merge would carry
-    // the dead key into every future save of data.json.
-    delete (this.settings.ui as unknown as Record<string, unknown>)
-      .aiGeneratorDisplayMode;
+    // AI features and translations were removed from this build. Drop keys an
+    // older data.json may still carry, so the merge doesn't keep saving them.
+    const legacy = this.settings as unknown as Record<string, unknown>;
+    delete legacy.ai;
+    const ui = this.settings.ui as unknown as Record<string, unknown>;
+    delete ui.aiGeneratorDisplayMode;
+    delete ui.aiPdfPaneWidth;
+    delete (this.settings.paths as unknown as Record<string, unknown>).pdfCacheFolder;
+    // English is the only UI language.
+    this.settings.i18n = { language: "en" };
   }
 
   /**
@@ -1579,9 +1367,7 @@ export default class DecksPlugin extends Plugin {
     const paths = this.settings.paths;
     const legacy = legacyDefaultFolders(paths, pathCtx);
     const moves: Array<[string, string, string]> = [
-      [paths.pdfCacheFolder, legacy.pdfOcr, resolvePdfCacheFolder(paths)],
       [paths.directoryMediaFolder, legacy.directoryMedia, resolveDirectoryMediaFolder(paths)],
-      [paths.aiSourcesFolder, legacy.aiSources, resolveAiSourcesFolder(paths)],
     ];
     for (const [setting, from, to] of moves) {
       if (setting.trim() !== "") continue;
@@ -1610,7 +1396,6 @@ export default class DecksPlugin extends Plugin {
       await this.peerAppDatabase?.mergeIfChanged();
       // Repaint from the merged DB — no vault scan needed.
       await this.getDecksView()?.refreshDecksAndStats();
-      this.scheduleAiStatus();
     } catch (error) {
       this.logger.debug("reloadFromDiskIfNewer failed", error);
     } finally {
@@ -1666,43 +1451,6 @@ export default class DecksPlugin extends Plugin {
           return result;
         },
         settle,
-        {
-          aiEnabled: this.aiRefactorController.isEnabled(),
-          aiProvider: this.settings.ai.provider,
-          defaultModel: this.aiDefaultModel(),
-          onModelChange: (id: string) => void this.setAiModel(id),
-          // A reverse card is rewritten as its note's card, the way round the note holds it.
-          onRefactor: (current, options, signal) =>
-            refactorAsNote(card, current, options.targetKeys, (noteFields, targetKeys) =>
-              this.aiRefactorController.refactorCard(
-                noteFields,
-                {
-                  instructions: options.instructions,
-                  targetKeys,
-                  sourceContext: options.sourceContext,
-                  images: options.images,
-                  split: options.split,
-                  model: options.model,
-                },
-                signal,
-              ),
-            ),
-          onSplit: async (cards) => {
-            const edits = cards.map((c) => fieldSetToEdits(c));
-            const result = await this.flashcardWriter.splitFlashcard(card, edits);
-            if (result.ok) {
-              const file = this.app.vault.getAbstractFileByPath(card.sourceFile);
-              if (file instanceof TFile) {
-                await this.handleFileChange(file);
-                if (file.extension !== "canvas") {
-                  await this.flushDeckSync(card.deckId);
-                }
-              }
-              new Notice(`Split into ${cards.length} cards`);
-            }
-            return result;
-          },
-        },
         templateColumns,
       );
       wrapper.open();
@@ -1737,356 +1485,6 @@ export default class DecksPlugin extends Plugin {
       headers: card.templateRow.headers,
       cells: card.templateRow.cells,
     };
-  }
-
-  async openBatchRefactorModal(
-    cards: Flashcard[],
-    sourceContext?: string,
-    startSplit = false,
-  ): Promise<void> {
-    // Directory cards are review-only.
-    const editable = cards.filter((card) => !isDirectoryDeckPath(card.sourceFile));
-    if (editable.length < cards.length) new Notice(I18n.t.directory.readOnly);
-    // One rewrite per note: a reverse card is rewritten as its note's card.
-    cards = await repairTargets(this.db, editable);
-    if (cards.length === 0) return;
-    return new Promise((resolve) => {
-      const wrapper = new AiBatchRefactorModalWrapper(
-        this.app,
-        {
-          cards,
-          startSplit,
-          aiProvider: this.settings.ai.provider,
-          defaultModel: this.aiDefaultModel(),
-          onModelChange: (id: string) => void this.setAiModel(id),
-          run: (card, options, signal) =>
-            this.aiRefactorController.refactorCard(
-              cardToRefactorFieldSet(card),
-              // A caller-supplied source is the page the card came from; the
-              // modal's own instructions still win when it sets one.
-              sourceContext ? { sourceContext, ...options } : options,
-              signal,
-            ),
-          apply: async (card, accepted) => {
-            const merged = {
-              ...(cardToRefactorFieldSet(card) as Record<string, unknown>),
-            };
-            for (const p of accepted) merged[p.key] = p.after;
-            const edits = fieldSetToEdits(merged as unknown as RefactorFieldSet);
-            const result = await this.flashcardWriter.editFlashcard(card, edits);
-            if (result.ok) {
-              const file = this.app.vault.getAbstractFileByPath(card.sourceFile);
-              if (file instanceof TFile) {
-                await this.handleFileChange(file);
-                if (file.extension !== "canvas") {
-                  await this.flushDeckSync(card.deckId);
-                }
-              }
-              return { ok: true };
-            }
-            return { ok: false, error: result.failure.message };
-          },
-          applySplit: async (card, fieldSets) => {
-            const edits = fieldSets.map((c) => fieldSetToEdits(c));
-            const result = await this.flashcardWriter.splitFlashcard(card, edits);
-            if (result.ok) {
-              const file = this.app.vault.getAbstractFileByPath(card.sourceFile);
-              if (file instanceof TFile) {
-                await this.handleFileChange(file);
-                if (file.extension !== "canvas") {
-                  await this.flushDeckSync(card.deckId);
-                }
-              }
-              return { ok: true };
-            }
-            return { ok: false, error: result.failure.message };
-          },
-        },
-        () => resolve(),
-      );
-      wrapper.open();
-    });
-  }
-
-  /**
-   * Remember the tier or model chosen in a modal.
-   *
-   * Decks Pro has no tier control in settings — the choice belongs where the
-   * work happens — so the modals are the only place it is set, and it has to
-   * stick between them.
-   */
-  private async setAiModel(id: string): Promise<void> {
-    const provider = this.settings.ai.provider;
-    if (!id || this.settings.ai.models[provider] === id) return;
-    this.settings.ai.models[provider] = id;
-    await this.saveSettings();
-  }
-
-  /** The model the in-prompt picker defaults to: the configured one, with retired ids reset. */
-  private aiDefaultModel(): string {
-    const provider = this.settings.ai.provider;
-    return resolveModelId(
-      provider,
-      this.settings.ai.models[provider],
-      this.settings.ai.customModel?.[provider] ?? false,
-    );
-  }
-
-  openAiGeneratorModal(
-    sessionId?: string,
-    seed?: AiSessionSeed,
-    focus?: { rowId: string },
-  ): void {
-    this.pendingGeneratorOptions = this.buildAiGeneratorOptions(sessionId, seed, focus);
-    this.showAiGeneratorLeaf(sessionId);
-  }
-
-  /** The generator leaf, when it is showing this stored session. */
-  private generatorShowing(sessionId: string): AiGeneratorView | null {
-    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_GENERATOR)) {
-      if (leaf.view instanceof AiGeneratorView && leaf.view.showsSession(sessionId)) return leaf.view;
-    }
-    return null;
-  }
-
-  /**
-   * Act on a flagged card from the hub. An open session owns its pile, so the
-   * action goes through it; otherwise the stored card is re-read and changed only
-   * if it is still waiting.
-   */
-  private async triageAiCard(card: AiStagedCard, action: TriageAction): Promise<void> {
-    const view = this.generatorShowing(card.sessionId);
-    const rowId = localRowId(card.sessionId, card.id);
-    if (action === "fix") {
-      if (view) {
-        view.focusRow(rowId);
-        void this.app.workspace.revealLeaf(view.leaf);
-      } else {
-        this.openAiGeneratorModal(card.sessionId, undefined, { rowId });
-      }
-      return;
-    }
-    if (view && (await view.applyTriage(rowId, action).catch(() => false))) return;
-    const current = (await this.db.getAiStagedCards(card.sessionId)).find((c) => c.id === card.id);
-    if (!current || current.rubricVerdict !== "flagged") return;
-    if (current.status !== "proposed" && current.status !== "kept") return;
-    await this.db.updateAiStagedCard(
-      card.id,
-      action === "discard" ? { status: "discarded" } : { rubricVerdict: "pass" },
-    );
-    this.scheduleAiStatus();
-  }
-
-  /** Coalesced: a streaming round persists every few hundred milliseconds. */
-  private scheduleAiStatus(): void {
-    if (this.aiStatusTimer !== null) window.clearTimeout(this.aiStatusTimer);
-    this.aiStatusTimer = window.setTimeout(() => {
-      this.aiStatusTimer = null;
-      void this.refreshAiStatus().catch((e) => this.logger.debug("AI status refresh failed", e));
-    }, 1000);
-  }
-
-  private async refreshAiStatus(): Promise<void> {
-    const el = this.aiStatusEl;
-    if (!el) return;
-    el.empty();
-    if (!this.settings.ai.enabled) {
-      el.hide();
-      return;
-    }
-    const [sessions, counts] = await Promise.all([
-      this.db.getAiSessions(false),
-      this.db.getAiSessionCounts(),
-    ]);
-    const totals = hubTotals(sessions.map((s) => counts[s.id] ?? { staged: 0, flagged: 0, saved: 0 }));
-    if (totals.staged === 0) {
-      el.hide();
-      return;
-    }
-    el.show();
-    el.createSpan({ text: I18n.format(I18n.t.modals.aiGenerator.hub.rowStaged, { count: totals.staged }) });
-    if (totals.flagged > 0) {
-      el.createSpan({ cls: "decks-ai-status-warn", text: `⚠ ${totals.flagged}` });
-    }
-  }
-
-  /** Resume the session with a round for its uncovered concepts written, not sent. */
-  private openGapSession(gap: AiWorkbenchGap): void {
-    const terms = gap.concepts.map((c) => `${c.term} (p. ${c.page})`).join(", ");
-    this.openAiGeneratorModal(gap.sessionId, {
-      prompt: I18n.format(I18n.t.modals.aiGenerator.coverage.conceptPrompt, { terms }),
-    });
-  }
-
-  /** What a generator leaf needs to run. Also used when the workspace restores a
-   *  leaf, so a session tab reopens after a restart instead of coming back blank. */
-  private buildAiGeneratorOptions(
-    sessionId?: string,
-    seed?: AiSessionSeed,
-    focus?: { rowId: string },
-  ): AiGeneratorOptions {
-    return {
-      seed,
-      focus,
-      // Loaded on mount rather than passed in: the PDF must be re-read, from the vault
-      // or from its kept copy, before its chapters mean anything.
-      restoreSession: sessionId
-        ? () => this.loadAiSessionForResume(sessionId)
-        : undefined,
-      persistSession: (snapshot: AiSessionSnapshot) =>
-        this.persistAiSession(snapshot),
-      generate: ({ model, ...rest }, handlers, signal) =>
-        this.aiGeneratorController.generateStream(
-          { ...rest, modelOverride: model },
-          handlers,
-          signal,
-        ),
-      generateChunked: ({ model, ...rest }, handlers, signal) =>
-        this.aiGeneratorController.generateChunked(
-          { ...rest, modelOverride: model },
-          handlers,
-          signal,
-        ),
-      save: (cards, request) => this.saveGeneratedCards(cards, request),
-      deckFronts: async (filePath) => {
-        const deck = await this.db.getDeckByFilepath(filePath);
-        return deck ? questionFronts(await this.db.getFlashcardsByDeck(deck.id)) : [];
-      },
-      refine: async (
-        card: GeneratedCard,
-        options: {
-          instructions?: string;
-          split?: boolean;
-          cloze?: boolean;
-          sourceContext?: string;
-          model?: string;
-        },
-        signal?: AbortSignal,
-      ) => {
-        // A staged card has no row in the database yet, so the refactor service
-        // is handed the field set directly rather than a stored Flashcard.
-        const { cloze, ...rest } = options;
-        const result = await this.aiRefactorController.refactorCard(
-          fixFields(card, cloze ? "cloze" : null),
-          rest,
-          signal,
-        );
-        const toCard = (f: RefactorFieldSet): GeneratedCard => {
-          const fixed = fixedCard(f);
-          return fixed ? { ...card, ...fixed } : card;
-        };
-        return result.splitCards?.length
-          ? result.splitCards.map(toCard)
-          : [toCard(result.proposed)];
-      },
-      critique: async (
-        cards: CritiqueCard[],
-        model?: string,
-        signal?: AbortSignal,
-        cardType?: GeneratedCardType,
-      ) => {
-        const result = await this.aiCritiqueController.critique(
-          cards,
-          { model, cardType },
-          signal,
-        );
-        return result?.verdicts ?? null;
-      },
-      loadProfiles: async () =>
-        (await this.db.getAllProfiles()).map((p) => ({
-          id: p.id,
-          name: p.name,
-        })),
-      defaultFolder: this.settings.parsing.folderSearchPath || "",
-      canvasFolder: this.settings.canvasDecks.folderPath || "",
-      deckTag: this.settings.parsing.deckTag,
-      aiProvider: this.settings.ai.provider,
-      defaultModel: this.aiDefaultModel(),
-      pdfReading: this.settings.ai.pdfReading,
-      onModelChange: (id: string) => void this.setAiModel(id),
-      keepSourcePdf: (hash: string, bytes: ArrayBuffer) => this.aiSourcePdfs.keep(hash, bytes),
-      readSourcePdf: (hash: string) => this.aiSourcePdfs.read(hash),
-      pdfPaneWidth: this.settings.ui.aiPdfPaneWidth,
-      onPdfPaneWidth: (width: number) => {
-        this.settings.ui.aiPdfPaneWidth = width;
-        void this.saveSettings();
-      },
-      // Development builds only. The panel is a raw request/response viewer —
-      // useful while building, not something to ship inside a paid feature.
-      // esbuild folds __DECKS_DEV__ to false in production and drops the branch.
-      debugEnabled: __DECKS_DEV__ && this.settings.debug.enableLogging,
-      // PDF attach is available to all providers: Decks Pro OCRs the pages,
-      // any other provider uses free pdf.js text extraction.
-      pdfAvailable: this.settings.ai.enabled,
-      pdfOcr: this.pdfOcrCache,
-      conceptLedger: this.settings.ai.enabled
-        ? {
-            extract: (units, handlers, signal) =>
-              this.aiConceptController.extract(units, handlers, signal),
-            load: async (sourceHash) => ({
-              concepts: await this.db.getAiConcepts(sourceHash),
-              extracted: await this.db.getAiExtractedPages(sourceHash),
-            }),
-            save: (sourceHash, pages, concepts) =>
-              this.db.saveAiConcepts(sourceHash, pages, concepts),
-            cards: (sourceHash, excludeSessionId) =>
-              this.db.getAiCardsForSource(sourceHash, excludeSessionId),
-            ...(this.aiMatchController?.isAvailable()
-              ? {
-                  map: (concepts, cards, signal) =>
-                    this.aiMatchController.mapConcepts(concepts, cards, signal),
-                  remember: (stagedId, conceptId) =>
-                    this.db.updateAiStagedCard(stagedId, { conceptId }),
-                }
-              : {}),
-          }
-        : null,
-      repairCards: this.settings.ai.enabled
-        ? (ids, split) => void this.openRepairForCards(ids, split)
-        : undefined,
-      similar: this.aiMatchController?.isAvailable()
-        ? (filePath, staged, signal) => this.aiMatchController.similar(filePath, staged, signal)
-        : undefined,
-      ask: this.settings.ai.enabled
-        ? (req, signal) => this.aiChatController.ask(req, signal)
-        : undefined,
-      examPlanner: {
-        mix: (filePath, typedGrading) => this.examMixFor(filePath, typedGrading),
-        defaults: async (id) =>
-          (await this.db.getProfileById(id))?.examSettings ?? null,
-        saveDefaults: (id, examSettings) =>
-          this.db.updateProfile(id, { examSettings }),
-      },
-    };
-  }
-
-  private showAiGeneratorLeaf(sessionId?: string): void {
-    // Always a leaf: a session is a place you return to, and a modal cannot be
-    // reopened with the workspace or dragged into a split.
-    const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(VIEW_TYPE_AI_GENERATOR);
-    // Resuming a different session reuses the leaf rather than stacking tabs;
-    // one workbench session at a time matches the hub it came from.
-    const leaf = existing.length > 0 ? existing[0] : workspace.getLeaf("tab");
-    // The label goes in with the state, so the tab reads right on first paint.
-    void (sessionId ? this.db.getAiSession(sessionId).catch(() => null) : Promise.resolve(null))
-      .then((session) => {
-        const label = session ? sourceDisplayName(session.sourceRef) : null;
-        return leaf.setViewState({
-          type: VIEW_TYPE_AI_GENERATOR,
-          active: true,
-          state: sessionId ? (label ? { sessionId, label } : { sessionId }) : {},
-        });
-      })
-      .then(() => {
-        // setState normally takes the pending options; this covers a leaf that was not asked.
-        const view = leaf.view;
-        const pending = this.pendingGeneratorOptions;
-        this.pendingGeneratorOptions = null;
-        if (pending && view instanceof AiGeneratorView) view.setOptions(pending);
-        void workspace.revealLeaf(leaf);
-      })
-      .catch(console.error);
   }
 
   openSrMigrationModal(): void {
@@ -2297,383 +1695,6 @@ export default class DecksPlugin extends Plugin {
         await this.getDecksView()?.refresh();
       },
     ).open();
-  }
-
-  // Write the kept generated cards to disk, then register/sync the deck so the
-  // new cards appear. Returns a result the modal surfaces to the user.
-  /** Reconcile a generator pile into the database. The session is created on
-   *  the first write, so opening the generator alone leaves nothing behind. */
-  private async persistAiSession(
-    snapshot: AiSessionSnapshot,
-  ): Promise<string | null> {
-    if (snapshot.rows.length === 0 && !snapshot.sessionId) return null;
-
-    let id = snapshot.sessionId;
-    const deckId = snapshot.destinationPath ? generateDeckId(snapshot.destinationPath) : null;
-    if (id) {
-      // The source follows the PDF in use; a view without its PDF never erases the one stored.
-      const source =
-        snapshot.sourceKind === "pdf" && snapshot.sourceHash
-          ? {
-              sourceKind: snapshot.sourceKind,
-              sourceRef: snapshot.sourceRef,
-              sourceHash: snapshot.sourceHash,
-              selectedIds: snapshot.selectedIds,
-            }
-          : {};
-      await this.db.updateAiSession(id, {
-        ...source,
-        model: snapshot.model,
-        turns: snapshot.turns,
-        // Only once the session has saved somewhere; an unsaved one keeps what it had.
-        deckId: deckId ?? undefined,
-        profileId: snapshot.profileId ?? undefined,
-      });
-    } else {
-      id = await this.db.createAiSession({
-        sourceKind: snapshot.sourceKind,
-        sourceRef: snapshot.sourceRef,
-        sourceHash: snapshot.sourceHash,
-        selectedIds: snapshot.selectedIds,
-        deckId,
-        profileId: snapshot.profileId,
-        model: snapshot.model,
-        spendCents: 0,
-        turns: snapshot.turns,
-        archived: false,
-      });
-    }
-
-    // An upsert, so re-writing the whole pile is idempotent and a row's latest
-    // state always wins over what was stored a moment ago.
-    await this.db.createAiStagedCards(stagedCardsFromSnapshot(snapshot, id));
-    // Taken off the pile by Clear or Undo; left as kept they would still count.
-    for (const dropped of snapshot.droppedIds) {
-      await this.db.updateAiStagedCard(`${id}:${dropped}`, { status: "discarded" });
-    }
-    this.scheduleAiStatus();
-    return id;
-  }
-
-  /**
-   * What an attempt could already draw from a destination note. Counted through
-   * the same pool the setup dialog builds, so the blueprint and the dialog
-   * cannot disagree.
-   */
-  private async examMixFor(
-    filePath: string,
-    typedGrading: TypedGradingMode,
-  ): Promise<QuestionMix> {
-    const cards = await this.db.getFlashcardsByDeck(generateDeckId(filePath));
-    const examDeckIds = new Set(await this.db.getExamEnabledDeckIds());
-    const examEnabledByDeckId = new Map<string, boolean>();
-    for (const card of cards) {
-      examEnabledByDeckId.set(card.deckId, examDeckIds.has(card.deckId));
-    }
-    const pool = buildExamPool(cards, examEnabledByDeckId, typedGrading);
-    return mixFromPool(pool.eligible);
-  }
-
-  /**
-   * The two routes out of a finished attempt: write cards where there are
-   * none, repair the ones that keep being missed.
-   */
-  /** The ledger's concepts on the missed pages, so the prompt can name them. */
-  private async missedConcepts(
-    sourceHash: string | null,
-    pages: number[],
-  ): Promise<Array<{ term: string; page: number }>> {
-    if (!sourceHash) return [];
-    const onPages = new Set(pages);
-    try {
-      const concepts = await this.db.getAiConcepts(sourceHash);
-      // A handful names the gap; the whole ledger would bury it.
-      return concepts
-        .filter((c) => onPages.has(c.page))
-        .slice(0, 12)
-        .map((c) => ({ term: c.term, page: c.page }));
-    } catch {
-      return [];
-    }
-  }
-
-  private examMissHooks(): ExamMissHooks {
-    return {
-      onSessionFromMisses: ({ pages, sourceRef, sourceHash }) => {
-        void this.missedConcepts(sourceHash, pages).then((concepts) =>
-          this.openAiGeneratorModal(undefined, {
-            prompt: missesSessionPrompt(pages, concepts),
-            pdfPath: sourceRef || undefined,
-            pages,
-          }),
-        );
-      },
-      onRepairCards: (cardIds) => {
-        void this.openRepairForCards(cardIds);
-      },
-      judge: () => this.aiGradingController?.judge() ?? Promise.resolve(null),
-    };
-  }
-
-  private async openRepairForCards(cardIds: string[], split = false): Promise<void> {
-    const cards: Flashcard[] = [];
-    for (const id of cardIds) {
-      const card = await this.db.getFlashcardById(id);
-      if (card) cards.push(card);
-    }
-    if (cards.length === 0) return;
-    await this.openBatchRefactorModal(cards, undefined, split);
-  }
-
-  /**
-   * A card that keeps lapsing offers the two things that help: the page it came
-   * from, and a fix grounded in that page.
-   */
-  private reviewRepairHooks(): ReviewRepairHooks {
-    return {
-      resolve: (card) => resolveCardSource(this.db, card),
-      read: ({ page, path }) => {
-        void openVaultPdf(this.app, path, page);
-      },
-      fix: (card, source) => {
-        void this.sourcePageText(source).then((text) =>
-          this.openBatchRefactorModal([card], text || undefined),
-        );
-      },
-    };
-  }
-
-  /** One page of a source, from the OCR cache when the generator already
-   *  transcribed it, and from the PDF's own text layer otherwise. */
-  private async sourcePageText(source: CardSource): Promise<string> {
-    const file = this.app.vault.getAbstractFileByPath(source.path);
-    if (!(file instanceof TFile)) return "";
-    try {
-      const bytes = await this.app.vault.readBinary(file);
-      // Hash first: pdf.js detaches the buffer it is handed.
-      const hash = hashPdf(bytes);
-      const cached = await this.pdfOcrCache.get(
-        hash,
-        ocrSentinelForTier(this.aiDefaultModel()),
-        source.page,
-      );
-      if (cached) return `${pageMarker(source.page)}\n${cached}`;
-      const doc = await loadPdf(bytes);
-      return await buildSectionContent(doc, [source.page], "text", () =>
-        Promise.resolve(new Map<number, string>()),
-      );
-    } catch (e) {
-      console.debug("Decks: could not read the card's source page", e);
-      return "";
-    }
-  }
-
-  /** Drop kept PDF copies that no session, archived or not, still refers to. */
-  private async pruneAiSourcePdfs(): Promise<void> {
-    try {
-      const sessions = await this.db.getAiSessions(true);
-      // An empty list is more likely a database that did not load than one with no sessions.
-      if (sessions.length === 0) return;
-      const keep = new Set(sessions.map((s) => s.sourceHash).filter((h): h is string => Boolean(h)));
-      await this.aiSourcePdfs.prune(keep);
-    } catch (error) {
-      this.logger.debug("pruning kept AI source PDFs failed", error);
-    }
-  }
-
-  /** Reveal the hub, reusing its leaf. Refreshed on every open, since the pile
-   *  changes underneath it whenever the generator runs. */
-  async openAiWorkbench(): Promise<void> {
-    const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(VIEW_TYPE_AI_WORKBENCH);
-    const leaf = existing.length > 0 ? existing[0] : workspace.getLeaf("tab");
-    await leaf.setViewState({ type: VIEW_TYPE_AI_WORKBENCH, active: true });
-    if (leaf.view instanceof AiWorkbenchView) await leaf.view.refresh();
-    await workspace.revealLeaf(leaf);
-  }
-
-  /** A session and its pile, for Resume. Discarded cards come back too — a
-   *  dropped card is still evidence of what the model proposed. */
-  private async loadAiSessionForResume(
-    id: string,
-  ): Promise<AiSessionRestore | null> {
-    const session = await this.db.getAiSession(id);
-    if (!session) return null;
-    const cards = await this.db.getAiStagedCards(id);
-    const deck = session.deckId ? await this.db.getDeckById(session.deckId) : null;
-    const destinationPath =
-      deck && this.app.vault.getAbstractFileByPath(deck.filepath) ? deck.filepath : null;
-    return { session, cards, destinationPath };
-  }
-
-  /** Everything the workbench hub shows, in four indexed queries. */
-  private async loadAiWorkbench(): Promise<AiWorkbenchData> {
-    const since = new Date(Date.now() - 7 * 86400_000).toISOString();
-    const [sessions, counts, flagged, outcome] = await Promise.all([
-      this.db.getAiSessions(true),
-      this.db.getAiSessionCounts(),
-      this.db.getFlaggedAiStagedCards(),
-      this.db.getAiOutcome(since),
-    ]);
-    const open = this.app.workspace
-      .getLeavesOfType(VIEW_TYPE_AI_GENERATOR)
-      .map((leaf) => leaf.view.getState() as { sessionId?: unknown })
-      .find((state) => typeof state.sessionId === "string");
-    const provider = this.settings.ai.provider;
-    const options = this.settings.ai.enabled ? buildModelOptions(provider, this.aiDefaultModel()) : [];
-    return {
-      sessions,
-      counts,
-      flagged,
-      outcome,
-      activeSessionId: typeof open?.sessionId === "string" ? open.sessionId : null,
-      gap: await this.lastSessionGap(sessions).catch(() => null),
-      model: options.length > 1 ? { options, selected: this.aiDefaultModel() } : null,
-    };
-  }
-
-  /** Concepts the most recent live source-backed session has no card for. */
-  private async lastSessionGap(sessions: AiSession[]): Promise<AiWorkbenchGap | null> {
-    const last = sessions.find((s) => !s.archived && s.sourceHash);
-    if (!last?.sourceHash) return null;
-    const concepts = await this.db.getAiConcepts(last.sourceHash);
-    if (concepts.length === 0) return null;
-    const cards = await this.db.getAiCardsForSource(last.sourceHash);
-    const missing = buildConceptRows(concepts, cards).filter((r) => r.state === "no_card");
-    if (missing.length === 0) return null;
-    return {
-      sessionId: last.id,
-      source: sourceDisplayName(last.sourceRef) ?? last.sourceRef,
-      concepts: missing.map((r) => ({ term: r.term, page: r.page })),
-    };
-  }
-
-  /** Ids the destination deck already holds. A file that is not yet a deck has
-   *  nothing to check against, which is correct. */
-  private async existingDeckCardIds(
-    request: GeneratorSaveRequest,
-  ): Promise<Set<string>> {
-    if (request.kind !== "append") return new Set();
-    const deck = await this.db.getDeckByFilepath(request.filePath);
-    if (!deck) return new Set();
-    const cards = await this.db.getFlashcardsByDeck(deck.id);
-    return new Set(cards.map((c) => c.id));
-  }
-
-  private async saveGeneratedCards(
-    input: GeneratedCard[],
-    request: GeneratorSaveRequest,
-  ): Promise<{
-    ok: boolean;
-    error?: string;
-    count?: number;
-    skipped?: number;
-    elsewhere?: number;
-    deckId?: string;
-    filePath?: string;
-  }> {
-    try {
-      // In-run dedup only compares against the current run; this is what stops
-      // a second copy of a card the user already learned.
-      const { fresh, duplicates } = partitionAgainstDeck(
-        input,
-        await this.existingDeckCardIds(request),
-      );
-      const skipped = duplicates.length;
-      const destination =
-        request.kind === "append" ? await this.db.getDeckByFilepath(request.filePath) : null;
-      const held = await heldByOtherDecks(this.db, fresh, destination?.id ?? null);
-      const elsewhere = held.size;
-      const cards = fresh.filter((card) => !held.has(card));
-      if (cards.length === 0) {
-        return { ok: true, count: 0, skipped, elsewhere, filePath: request.kind === "append" ? request.filePath : undefined };
-      }
-      if (request.kind === "new-file") {
-        const profile =
-          (await this.db.getProfileById(request.profileId)) ??
-          (await this.db.getDefaultProfile());
-        const { filePath } = await this.flashcardComposer.saveGenerated(cards, {
-          kind: "new-file",
-          format: request.format,
-          folder: request.folder,
-          name: request.name,
-          tag: request.tag,
-          level: profile.headerLevel,
-        });
-        const tag =
-          request.format === "canvas"
-            ? this.settings.canvasDecks.tagName || request.tag
-            : request.tag;
-        const deckId = await this.registerGeneratedDeck(
-          filePath,
-          tag,
-          request.profileId,
-        );
-        return { ok: true, count: cards.length, skipped, elsewhere, deckId, filePath };
-      } else {
-        // Append to any vault file. Use the existing deck's profile if the file
-        // is already a deck, otherwise the default profile; then register/sync.
-        const existing = await this.db.getDeckByFilepath(request.filePath);
-        const profileId =
-          existing?.profileId ?? (await this.db.getDefaultProfile()).id;
-        const profile =
-          (await this.db.getProfileById(profileId)) ??
-          (await this.db.getDefaultProfile());
-        await this.flashcardComposer.saveGenerated(cards, {
-          kind: "append",
-          format: request.format,
-          filePath: request.filePath,
-          level: profile.headerLevel,
-        });
-        const tag =
-          request.format === "canvas"
-            ? this.settings.canvasDecks.tagName || this.settings.parsing.deckTag
-            : this.settings.parsing.deckTag;
-        const deckId = await this.registerGeneratedDeck(
-          request.filePath,
-          tag,
-          profileId,
-        );
-        return {
-          ok: true,
-          count: cards.length,
-          skipped,
-          elsewhere,
-          deckId,
-          filePath: request.filePath,
-        };
-      }
-    } catch (e) {
-      this.logger.error("Failed to save generated cards", e);
-      const message = e instanceof Error && e.message ? e.message : String(e);
-      return {
-        ok: false,
-        error: message || I18n.t.modals.aiGenerator.saveFailed,
-      };
-    }
-  }
-
-  // Ensure a deck row exists for a freshly created file, associate the chosen
-  // profile, and parse its cards. Idempotent with the file-create handler.
-  // Returns the deck id when resolvable so the caller can select it.
-  private async registerGeneratedDeck(
-    filePath: string,
-    tag: string,
-    profileId: string,
-  ): Promise<string | undefined> {
-    let deck = await this.db.getDeckByFilepath(filePath);
-    if (!deck) {
-      await this.deckSynchronizer.createDeckForFile(filePath, tag);
-      await yieldToUI();
-      deck = await this.db.getDeckByFilepath(filePath);
-    }
-    if (!deck) return undefined;
-    if (profileId && deck.profileId !== profileId) {
-      await this.db.updateDeck(deck.id, { profileId });
-    }
-    await this.deckSynchronizer.syncDeck(deck.id);
-    await this.getDecksView()?.refreshStats();
-    return deck.id;
   }
 
   async handleFileChange(file: TFile) {
@@ -2909,36 +1930,6 @@ export default class DecksPlugin extends Plugin {
       await this.saveSettings();
     } catch (error) {
       this.logger.error("Anchor migration failed", error);
-    }
-  }
-
-  /** Repaint the settings panel if it is currently mounted. */
-  private refreshSettingsTab(): void {
-    if (this.settingTab?.containerEl.isConnected) this.settingTab.display();
-  }
-
-  // Completes the obsidian://decks-auth hand-off started from settings. The
-  // nonce check lives in DecksProAuth, so a stray or replayed URL is rejected.
-  private async completeProSignIn(state?: string, code?: string): Promise<void> {
-    if (!this.decksProAuth) return;
-    const s = I18n.t.settings.ai;
-    try {
-      const ok = await this.decksProAuth.completeSignIn({ state, code });
-      new Notice(ok ? s.signInSuccess : s.signInFailed);
-      if (ok) {
-        // Decks Pro becomes usable immediately; select it if AI is still unset.
-        if (!this.settings.ai.enabled) {
-          this.settings.ai.enabled = true;
-        }
-        this.settings.ai.provider = "decks-pro";
-        await this.saveSettings();
-        // The settings panel rendered its signed-out state before the browser
-        // round-trip; repaint so it reflects the account without a reopen.
-        this.refreshSettingsTab();
-      }
-    } catch (error) {
-      this.logger.error("Decks Pro sign-in failed", error);
-      new Notice(s.signInFailed);
     }
   }
 

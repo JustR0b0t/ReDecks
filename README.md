@@ -1,402 +1,147 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/dscherdi/decks/HEAD/decksmd-banner.jpg">
-    <img src="https://raw.githubusercontent.com/dscherdi/decks/HEAD/decksmd-banner-light.jpg" alt="DecksMD — Turn your Obsidian notes into flashcards. No special syntax. No separate deck to build." width="100%">
-  </picture>
-</p>
+# ReDecks
 
-# Decks ![Downloads](https://img.shields.io/github/downloads/dscherdi/decks/total) ![Downloads Latest](https://img.shields.io/github/downloads/dscherdi/decks/latest/total?style=flat-square) ![Release](https://img.shields.io/github/v/release/dscherdi/decks)
-
-**English** · [Deutsch](./README.de.md) · [Español](./README.es.md) · [Français](./README.fr.md) · [Italiano](./README.it.md) · [Русский](./README.ru.md) · [Türkçe](./README.tr.md) · [Shqip](./README.sq.md) · [العربية](./README.ar.md) · [हिन्दी](./README.hi.md) · [中文](./README.zh.md) · [繁體中文](./README.zh-TW.md) · [日本語](./README.ja.md)
-
-**Turn your Obsidian notes into flashcards. No special syntax. No separate deck to build.**
-
-> **New — [Decks Pro](https://decksmd.app/pricing/)** · Generate cards from your notes, PDFs and scanned slides without setting up an API key. Free to try — around 100 cards or 10 PDF pages, no card required. Everything else in Decks stays free, and bring-your-own API key still works.
-
-> **Now on iPhone, iPad and Android — [DecksMD](https://decksmd.app/mobile/)** · Your vault, your cards, on your phone — the same markdown, reviewed anywhere.
+> [!WARNING]
+> **This is a personal fork, made only for my own use.**
+> ReDecks is a stripped-down and modified copy of the Obsidian plugin [Decks](https://github.com/dscherdi/decks) by Xherdi Lika. I built it for myself and share the source only because the upstream license allows it.
 >
-> <a href="https://apps.apple.com/app/id6801156953"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="40" align="middle"></a> <a href="https://play.google.com/store/apps/details?id=app.decksmd"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60" align="middle"></a>
+> - **It is not maintained.** No support, no bug fixes, no feature requests, no release schedule.
+> - **It is not a replacement for Decks.** If you want a working, supported plugin, use the original: [dscherdi/decks](https://github.com/dscherdi/decks).
+> - Issues and pull requests are not monitored.
 
-> **Ready-made decks — [explore the deck directory](https://decksmd.app/decks)** · Complete decks you can add to Obsidian in one click, such as German courses by level. See [Deck directory](#deck-directory).
+All credit for the engine, the scheduling and the original plugin goes to the upstream author. See [Acknowledgements](#acknowledgements) and [License](#license).
 
-> **Coming from the Spaced Repetition plugin?** Jump to Decks without losing your progress — the built-in one-click migrator extracts your `::` cards into clean Decks decks, rewrites each note into readable prose, and carries over your review history, all while leaving your original notes untouched. You pick up your reviews right where you left off. See [Coming from Spaced Repetition](#coming-from-spaced-repetition).
-
-> **Coming from Anki?** Import an Anki `.apkg` export in one click — your decks, cards, media, and review history come with you, and your cards resume on FSRS-6 right where Anki left them. See [Coming from Anki](#coming-from-anki).
-
-Tag a file with `#decks`. Each `##` heading becomes the front of a card; the text below becomes the back. Tables, image occlusion, and `==cloze==` highlights work the same way. Scheduling is handled by FSRS-6 — the modern spaced-repetition algorithm.
-
-![Demo](https://raw.githubusercontent.com/dscherdi/decks/HEAD/decks_showcase.gif)
-
-[Documentation](https://decksmd.app/docs/) · [Website](https://decksmd.app) · [Explore decks](https://decksmd.app/decks) · [Discord](https://discord.com/channels/686053708261228577/1497268419861418035) · [Release notes](./release-notes/) · [Buy me a coffee](https://www.buymeacoffee.com/dscherdil0)
-
-## Why Decks
-
-- **Your notes are already the deck.** Tag a file; each heading at your chosen level becomes a front and the text below becomes the back. Coming from Anki, there's nothing to author twice.
-- **Four formats, no syntax to learn.** Headers, two-column tables, image occlusion, and `==cloze==` from highlights you already use.
-- **FSRS-native scheduling.** Three profiles (Standard / Intensive / Trained), per-tag retention targets, no SM-2 baggage.
-- **Algorithm tuning.** One-click optimizer trains the FSRS weights on your own review history — better scheduling for your forgetting curve, all client-side.
-- **Real multi-device sync.** Database merges across iCloud/Dropbox automatically — review on phone and desktop, no lost history.
-- **Built for mobile.** Touch-tuned review UI, safe-area aware, tested daily on phones.
-
-## 60-second quick start
-
-1. Install **Decks** from Community Plugins, enable it.
-2. Open any note. Add `#decks` to its frontmatter or as an inline tag.
-3. Write a `##` heading, then a paragraph below it. Repeat for as many cards as you want:
-
-   ```markdown
-   ---
-   tags: [decks/spanish]
-   ---
-
-   ## What does "Hola" mean?
-
-   Hello.
-
-   ## How do you say "Thank you" in Spanish?
-
-   Gracias.
-   ```
-
-4. Click the **brain icon** in the ribbon to open the Decks panel. Click your file. Start reviewing.
-
-The filename becomes the deck name. Cards sync automatically when you save the note.
-
-## Card formats
-
-Decks supports four ways to write cards. Pick whichever matches how you already write notes.
-
-<details>
-<summary><b>Header + paragraph</b> — the default. Each heading at the configured level (H2 by default) is a front; the body below is the back.</summary>
-
-```markdown
----
-tags: [decks/spanish]
 ---
 
-## What does "Hola" mean in English?
+## What is ReDecks?
 
-Hello.
+ReDecks turns Obsidian notes into spaced-repetition flashcards, scheduled with FSRS-6. It is based on Decks v2.12.9 with two things changed:
 
-## How do you say "Thank you" in Spanish?
+1. The plugin was slimmed down (English only, no AI / Pro features).
+2. The card parser was rewritten so that cards are only created inside explicitly marked blocks of a note, using a small set of hashtags.
 
-Gracias.
+Card IDs (progress tracking) and the spaced-repetition system are unchanged.
+
+## Changes compared to upstream Decks
+
+### Removed
+
+| Removed | Details |
+| --- | --- |
+| **All translations except English** | All other locale files are gone. Language initialization, type definitions and the language dropdown in the settings were adjusted, so the plugin is English-only. |
+| **All AI features** | AI Generate, AI Refactor and everything that belongs to them: UI components, settings tabs, ribbon/toolbar buttons, context menu entries, commands, services and the related translation keys. |
+| **DecksMD Pro** | Authentication, tokens and all Pro-related UI and logic. |
+| **BYOK (bring your own key)** | Management of API keys (`ai-keys.json`) and everything around it. |
+| **AI-related assets** | Images and GIFs used for the AI features (e.g. `decks_ai_generate.gif`) and references to them. |
+
+Only the plugin's own integration was removed. The `@decks/core` package and `node_modules` were not touched.
+
+### Changed: new block-based card parser
+
+Upstream Decks scans a whole tagged note and turns every matching structure into a card. ReDecks does **not**. A note is scanned only in the regions you mark with start hashtags, and each start hashtag enables only certain card types for the section that follows.
+
+Everything else about cards (stable card IDs, review history, FSRS scheduling) works as before.
+
+## Quick start
+
+1. Build/install the plugin manually (it is not in the Community Plugins list) and enable it.
+2. Add `#decks` to a note, open a block with one or more start hashtags, write your cards and close the block with `#enddeck` (see [How the parser works](#how-the-parser-works)).
+3. Open the Decks panel (brain icon in the ribbon), click your file and start reviewing.
+
+The filename is used as the deck name. Cards sync when you save the note.
+
+## How the parser works
+
+### 1. Requirements
+
+- A file is scanned **only if it carries the deck tag** (default `#decks`, configurable in the settings).
+- Inside such a file, only the regions between a **start hashtag** and `#enddeck` (or the end of the file) are parsed. Nothing else in the note is turned into cards.
+- Fenced code blocks (```` ``` ````) are still ignored, and hashtags inside them have no effect.
+- Hashtags must stand alone (`#remdeck`, not `x#remdeck`). The line holding them is never turned into a card.
+- **Existing notes without start hashtags produce no cards** and their cards disappear on the next sync. Add the hashtags before syncing; cards come back with their review history, since IDs depend on the content.
+
+### 2. Start hashtags
+
+A start hashtag enables card types for the section that follows. Several hashtags on one line combine their types (e.g. `#remdeck #clozedeck`).
+
+| Hashtag | Enables |
+| --- | --- |
+| `#alldeck` | All five types below |
+| `#remdeck` | Single-line term/definition cards |
+| `#headerdeck` | Header + paragraph cards |
+| `#tabledeck` | Markdown table cards |
+| `#clozedeck` | Cloze cards (`==text==`) |
+| `#imgdeck` | Image occlusion cards |
+
+### 3. `#enddeck`
+
+`#enddeck` switches all parsers off until the next start hashtag. Anything between `#enddeck` and the next start hashtag is never turned into cards, even if it contains `==`, headings, tables, etc.
+
+### 4. `#remdeck` single-line cards
+
+A line becomes a card if it contains one of these four operators. The operator needs **at least one space before and one space after it**; `Text==Text` is **not** a card.
+
+| Syntax | Result |
+| --- | --- |
+| `Term == Definition` | Front = Term, Back = Definition |
+| `Term >> Definition` | Front = Term, Back = Definition |
+| `Definition << Term` | Front = Term, Back = Definition (direction reversed) |
+| `Left <> Right` | **Two** cards: Left → Right and Right → Left, each tracked separately |
+
+### 5. `#headerdeck` header + paragraph cards
+
+Each heading is the front of a card, the text below is the back. A card ends at:
+
+- the next heading,
+- `#enddeck`,
+- **two consecutive blank lines** (counted only once the card has content), or
+- the marker `%%endcard%%`.
+
+Everything after the end of a card up to the next card is ignored.
+
+### 6. `#tabledeck` table cards
+
+Two-column markdown tables as before (first column = front, second = back, optional third notes column). A table ends immediately when `%%endcard%%` appears.
+
+### 7. `#clozedeck` and `#imgdeck`
+
+Cloze cards use `==highlight==`: one card per highlight, with the surrounding paragraph (consecutive non-empty lines) as the text. Lines already used as `#remdeck` cards and headings are skipped. The "cloze" setting of the deck profile is ignored for Markdown notes; only `#clozedeck` decides. Image occlusion works as in upstream, but only inside a `#imgdeck` (or `#alldeck`) section.
+
+## Features inherited from upstream
+
+Everything not listed under "Changes" above comes from Decks v2.12.9 and was left as it is. I did not re-test or adapt it for the new parser, so treat it as unverified.
+
+- FSRS-6 scheduling with Standard / Intensive / Trained profiles, per-tag retention targets and daily limits
+- Algorithm tuning (client-side FSRS weight optimizer)
+- Custom decks built from filter rules, tags and per-card tags
+- Statistics (heatmap, retention, forecast, intervals, …)
+- Canvas decks, templates, exam decks
+- Anki import/export, migration from the Spaced Repetition plugin, automatic backups
+- Multi-device sync via `.deckssynclog` files and the SQLite database
+- Keyboard shortcuts: **Space** to flip, **1–4** to rate
+
+Some of these (canvas decks, exam decks, title-format and reverse cards, the migrators) were written for the upstream parser and may behave differently or not work at all with the block-based parser. For their documentation, see the [upstream docs](https://decksmd.app/docs/).
+
+## Building
+
+There are no prebuilt releases. Build it yourself, as for any Obsidian plugin:
+
+```bash
+npm install
+npm run build
 ```
 
-The filename becomes the deck name. Header level is configurable per profile (H2 by default). Headings above the configured level aren't turned into cards — they're kept as a breadcrumb path (e.g. `Chapter 1 > Section 2`) attached to each card for context.
+Then copy `main.js`, `manifest.json` and `styles.css` into `<vault>/.obsidian/plugins/<id>/`, where `<id>` is the `id` in `manifest.json` (currently `decks`).
 
-Add optional **notes** to a header-paragraph card with an Obsidian comment (`%%a hint or mnemonic%%`) anywhere in the body, or by putting the note after a `---` divider at the end of the body. Notes are shown on demand (press **N**) during review, just like the table notes column.
+## Acknowledgements
 
-</details>
-
-<details>
-<summary><b>Tables</b> — two-column markdown tables, with an optional notes column.</summary>
-
-```markdown
-## Concepts
-
-| Question                | Answer                                            |
-| ----------------------- | ------------------------------------------------- |
-| What is photosynthesis? | The process plants use to convert sunlight        |
-| Define gravity          | The force that attracts objects toward each other |
-```
-
-- First column = front, second column = back. Header row is ignored.
-- Tables must sit directly under a header (no other paragraphs inside).
-- Add a third "Notes" column for hints/mnemonics shown via toggle (press **N**) during review.
-
-</details>
-
-<details>
-<summary><b>Cloze deletions</b> — highlight text with <code>==text==</code> to blank it out.</summary>
-
-```markdown
-## The Solar System
-
-The ==Sun== is the star at the center of our solar system. The closest planet to the Sun is ==Mercury==, and the largest planet is ==Jupiter==.
-```
-
-Each highlight becomes one card. During review the active blank shows as `[...]`; tap to reveal. Cloze also works inside table cells. Two context modes per profile (hide or show other clozes). Enabled by default.
-
-</details>
-
-<details>
-<summary><b>Image occlusion</b> — hide regions of an image and recall what's underneath. Two ways: interactive (draw boxes) or a numbered list.</summary>
-
-**Interactive (recommended).** Run the command **"Create image occlusion at cursor"**, pick an image, then draw boxes right on it in the editor. Type a Markdown/LaTeX answer for each box, or leave it empty to just hide a baked-in label. It saves as a self-contained `decks-occlusion` code block (coordinates are percentages, so it scales on any device):
-
-````markdown
-```decks-occlusion
-image: "[[anatomy/heart.png]]"
-version: 2
-masks:
-  - id: m1
-    x: 12.5
-    y: 30
-    w: 18
-    h: 9.5
-    answer: "Left **ventricle**"
-  - id: m2
-    x: 55
-    y: 22
-    w: 14
-    h: 8
-    answer: ""
-```
-````
-
-Each box is one card. In review, the box is hidden on the front and revealed on the back (with its answer); in reading view you see the fully answered diagram. Re-edit any time from the block's **Edit** button or the flashcard manager.
-
-**Numbered list (simple).** An image embed followed by a numbered list also works:
-
-```markdown
-## Bones of the arm
-
-![[arm_bones.png]]
-
-1. ==Humerus==
-2. ==Radius==
-3. ==Ulna==
-```
-
-Each list item is one card; the image shows on the front and the matching item is blanked on the back.
-
-Both builds on cloze, so cloze must be enabled on the profile and the block must sit under a parsed header.
-
-</details>
-
-<details>
-<summary><b>More: title format, reverse cards, per-card tags</b></summary>
-
-**Title format** — the filename becomes the front, the entire file becomes the back. Set "Title" as the header level in your profile.
-
-**Reverse cards** — add `reverse: true` to a file's frontmatter to auto-generate a reversed copy of every card. Progress is tracked separately per direction.
-
-**Per-card tags** — add `#tag` directly in headers (e.g., `## What is photosynthesis? #plants #high-school`). Tags are stripped from the displayed front, shown as chips during review, and inherited by table rows and reverse cards. Build "filter decks" that pull every card with a given tag across your vault.
-
-</details>
-
-### Canvas decks
-
-Author cards on an Obsidian Canvas (`.canvas`) instead of a markdown file. Each canvas in the configured folder becomes one deck; each text node inside it is parsed for the same four card formats above (header-paragraph, table, cloze, image occlusion). One text node can hold a whole table of cards, or one cloze sentence, or a single header + paragraph — mix freely across the canvas.
-
-Set it up in **Settings → Canvas decks**:
-
-- **Canvas decks folder** — every `.canvas` inside this folder becomes a deck.
-- **Canvas deck tag** — applied to all canvas decks for grouping in the Tags view and for profile mapping. Defaults to `#decks/canvas` (which uses the DEFAULT profile unless you map it elsewhere).
-
-Canvas decks behave like file decks everywhere: they show up in the deck list, in the Tags view, can be included in custom decks by filter (`deckTag = #decks/canvas`), are editable from the flashcard manager, and "Go to source" from review opens the canvas and focuses the source text node.
-
-**Spatial cards.** Connect text nodes with edges and each edge becomes a flashcard: the from-node is the question, the to-node is the answer, and the edge label is an optional hint. Chains (A → B → C), one-to-many, and many-to-one all work; unconnected nodes still parse with the four formats above.
-
-A `Decks — Canvas getting started.canvas` is auto-created in a `Canvas decks/` folder on first install (or first upgrade) to show the formats in action.
-
-![Canvas Spatial Cards Demo](https://raw.githubusercontent.com/dscherdi/decks/HEAD/canvas_spatial_cards_demo.gif)
-
-See **[decksmd.app/docs/cards/canvas/](https://decksmd.app/docs/cards/canvas/)** for details.
-
-## Templates
-
-Render the rows of a table through a card design you author once. Write it in HTML/CSS or Markdown, drop in
-`{{Column}}` placeholders, and bind it to your tables with a tag — one template styles every matching row.
-
-```decks-html-front
-<ruby>{{Word}}<rt>{{Reading}}</rt></ruby>
-```
-
-Point **Settings → Templates** at a folder, tag a template file and the table's heading with the same tag,
-and you're set. Templates support front/back/notes faces in HTML or Markdown, render in a sanitized,
-theme-aware sandbox, and expose CSS variables (`--padding`, `--align`, `--bg`, …) for full layout control —
-from comfortable reading cards to edge-to-edge custom designs. Tables with no matching template fall back to
-the normal columns.
-
-See **[decksmd.app/docs/cards/templates/](https://decksmd.app/docs/cards/templates/)** for the full guide and examples.
-
-## Exam decks
-
-Run a deck as a graded exam: a drawn set of questions answered in one sitting, in any order, with a
-results breakdown — and optionally a time limit and a pass score — at the end. Exams are enabled per
-profile, and add one authoring format: a heading followed by a task list becomes a multiple-choice card.
-
-```markdown
-## Which element is a noble gas?
-
-- [ ] Oxygen
-- [x] Argon
-- [ ] Nitrogen
-```
-
-`- [x]` marks a correct option; checking several makes it multi-select.
-
-- Tag a note with the `exams` subtag of your deck tag (by default `#decks/exams`) to use the preinstalled
-  **Exams** profile, or turn on **Exam questions** in any profile.
-- Start from the deck's menu (**⋮ → Start exam**) or by clicking an exam deck; a setup dialog shows the
-  question count and lets you adjust the exam settings.
-- Besides multiple choice, header-and-answer cards and table rows are asked as type-in questions, and
-  cloze cards show the sentence with the highlights as type-in blanks.
-- Typed answers are graded exactly, tolerantly of small typos, or self-graded; exam defaults (question
-  count, time limit, pass score, shuffling, feedback timing, option labels) live on the profile.
-- Completed exams are stored in the plugin database, merge across devices, and are included in backups.
-
-A "Demo exam" deck showing every question format is created on first install (or via the **Create demo
-exam deck** command).
-
-See **[decksmd.app/docs/exams/overview/](https://decksmd.app/docs/exams/overview/)** for the full authoring rules.
-
-## What you get
-
-- Browse mode and timed review sessions with daily limits.
-- Per-tag profiles (Standard / Intensive FSRS, retention target, daily quotas).
-- Custom decks built from filter rules — e.g., every card tagged `#high-school`.
-- Exam mode: graded exam sessions with multiple-choice, type-in, and cloze questions.
-- Statistics: heatmap, retention, future-due forecast, intervals, hourly breakdown, answer-button stats.
-- Anki import and export, automatic backups, multi-device merge sync.
-- Keyboard shortcuts: **Space** to flip, **1–4** to rate.
-
-## Deck directory
-
-Ready-made decks are listed at [decksmd.app/decks](https://decksmd.app/decks). **Open in Obsidian** on a deck's page adds it to the plugin's *Deck directory* section, where you can review it but not edit it. You can also add a downloaded file with **Import a Decks package (.dpkg)**, and share your own decks with **Export deck as a Decks package (.dpkg)**.
-
-A deck's images, audio and video are kept in a **Decks media** folder at the vault root, so they sync with the vault. Decks you add in the DecksMD app appear here too, with the reviews done in the app, and decks you add here appear in the app. Settings → File locations can move the folder.
-
-**Network use and account.** Downloading from the directory needs a free DecksMD account, which you sign in to on the website, not in the plugin. When a deck link opens in Obsidian, the plugin requests the deck's public details from `decksmd.app` for the confirmation prompt, then downloads the deck with the one-time ticket from the link. If one of a directory deck's images is missing from the media folder, for example while the vault is still syncing, the plugin fetches that image from `decksmd.app` by its content hash when the card is shown. Nothing from your vault is sent. Directory decks are covered by the [deck directory terms](https://decksmd.app/legal/deck-directory).
-
-## AI assistance (optional)
-
-Decks has optional AI features that are **off until you add an API key or link DecksMD Pro** in **Settings → AI features**:
-
-- **Generate** — describe a topic (and optionally attach notes/images) and stream new flashcards into an inbox; keep the ones you want and save them to a new file or append to an existing deck, as header+paragraph, table, or canvas.
-- **Refactor** — rewrite a single card, or batch-refactor a selection, to improve clarity and fix grammar; or **split** one dense card into several atomic ones. You review every change before it's applied.
-
-**Providers.** Use **DecksMD Pro**, or bring your own key for OpenAI, Anthropic (Claude), Google (Gemini), or any OpenAI-compatible endpoint (including local servers like Ollama / LM Studio). With your own key, you pick the provider and model in settings.
-
-**Where your key lives.** API keys, and the device token that links the plugin to DecksMD Pro, are stored in `ai-keys.json` in the plugin's folder (usually `.obsidian/plugins/decks/`) and are **never** written to `data.json`, so they stay out of the plugin settings that Obsidian Sync replicates. A service that syncs the whole vault folder, such as iCloud Drive, Dropbox, Syncthing or git, **does** copy `ai-keys.json` to your other devices; exclude the file there if you don't want that.
-
-**Transparency — what is sent, and where.** Nothing is sent unless you use an AI feature. A request carries only what that feature works on, for example the card's fields when you refactor, or your topic and any notes or images you attach when you generate; your vault as a whole and your review history are never sent. With your own key, the request goes directly from your device to the provider you configured, together with a built-in instruction describing how Decks cards work. With DecksMD Pro, it goes to the DecksMD backend, which adds its instructions and passes it to an AI service; your content isn't stored, and it isn't used for training. With DecksMD Pro linked, opening the settings also loads your plan and remaining allowance. The plugin sends no telemetry. What each feature sends is listed in full in the [privacy policy](https://decksmd.app/legal/privacy).
-
-![Decks AI Generator](https://raw.githubusercontent.com/dscherdi/decks/HEAD/decks_ai_generate.gif)
-
-## Multi-device sync
-
-Decks syncs alongside your vault — iCloud Drive, Obsidian Sync, Dropbox, Syncthing, anything that shares the vault folder works.
-
-The plugin uses two files:
-
-- **`<plugin folder>/flashcards.db`** — the SQLite database holding every card's FSRS state and full review history. This is the cold-storage snapshot, persisted to disk every ~30 minutes when there's new activity (and on app background / unload).
-- **`<deviceId>.deckssynclog`** — one small append-only JSONL file per device, in your vault root. Every state change you make — rating a card, editing a profile, creating a custom deck, starting/ending a review session — is recorded here as a single short line. Other devices read these files on app focus and replay the entries against their own database.
-
-The custom `.deckssynclog` extension keeps the file out of Obsidian's file explorer; you'll see it in Finder/Files but it never shows up as a note. iCloud and other file-sync providers ship these small text files **dramatically faster** than the binary database — typically seconds instead of minutes — which is why the cross-device "I just rated this on my Mac, now I see it on my iPhone" lag is usually around 15–30 seconds rather than 1–2 minutes.
-
-The log self-truncates to the last 30 days on plugin load. Long-running cross-device state (months or years of review history) is preserved in the binary database, which still syncs through your file-sync provider on its own slower schedule.
-
-If your sync provider creates conflict-copy files (e.g. iCloud's `<deviceId> (Mac's conflicted copy 2026-05-13).deckssynclog`), the plugin detects them, applies any unique entries, and renames the original aside as `*.consumed-<timestamp>` so it's not re-processed.
-
-## Personalized scheduling
-
-FSRS ships with sensible defaults that work well out of the box. Once you've accumulated ~100 reviews, you can train the algorithm's 21 weights against your own review history and get card schedules tailored to your specific forgetting curve — the same kind of thing Anki desktop does, but client-side, no server, no telemetry.
-
-**Settings → Algorithm tuning → Optimize parameters.** Training runs in seconds for typical decks; you'll see a before/after log-loss comparison, click Apply to use the trained weights or Discard to keep defaults. Re-train any time to refine the weights as you accumulate more reviews.
-
-Trained weights are global but per-profile applied — pick **Trained** in any profile's FSRS profile dropdown to opt that profile in. Intensive profiles continue to use their sub-day defaults; existing card data is preserved through training.
-
-<details>
-<summary>How it works under the hood</summary>
-
-The optimizer matches the open-spaced-repetition reference methodology: Adam optimizer over binary cross-entropy loss, cosine-annealed learning rate, parameter clipping against published FSRS-6 bounds. Step count scales with your review history (more reviews → more iterations).
-
-The implementation has been validated against the published FSRS-6 spec (1396/1396 forward-pass cases match bit-exact) and benchmarked against 443M anonymized Anki reviews — calibration of shipped defaults agrees with empirical recall to within 0.8 percentage points.
-
-</details>
-
-## Settings
-
-Open **Settings → Decks** for daily limits, retention targets, search paths, session duration, and backup options. Per-tag overrides via the gear icon on any deck.
-
-<details>
-<summary>All settings</summary>
-
-**Profile settings** (Manage profiles in the deck panel):
-
-- New cards per day, review cards per day (per deck)
-- Retention target (default 90%)
-- FSRS profile: Standard, Intensive, or Trained (Trained available after optimizing parameters)
-- Header level for parsing (or "Title" to use the filename)
-- Review order: oldest due first, or random
-- Cloze deletions: enabled by default
-- Cloze context: hidden or open
-
-**Review settings:** session duration (1–60 min), next-day rollover hour (default 4 AM), keyboard shortcuts toggle.
-
-**Parsing settings:** scan the entire vault, or restrict to a folder.
-
-**Other:** background refresh interval, automatic backup count, debug logging.
-
-</details>
-
-## Coming from Spaced Repetition
-
-Already using the **Spaced Repetition** plugin? You can switch to Decks **without losing your cards or your review history** — and continue your reviews exactly where you left off.
-
-Open the migrator from the deck panel toolbar (the cube icon) or run the **"Migrate from Spaced Repetition plugin"** command.
-
-**Your original notes are never touched.** Migration is additive: it writes new files into a target folder you choose (mirroring your structure) and leaves your source notes exactly as they are. Re-running the migrator simply overwrites the files it generated.
-
-**How it works**
-
-1. **Pick a source folder** to scan (or leave it empty to scan the whole vault), and a target folder for the output. Decks finds every note with legacy cards — single-line (`Front :: Back`), reversed (`Front ::: Back`), multi-line (`?` / `??`), clozes (`==…==` / `{{…}}`) — and whole-note reviews (the `#review` tag).
-2. **Each note is split into two clean files.** A **flashcards deck** (`<Note> (Flashcards)`) holds the extracted cards in standard Decks format, and a **readable note** keeps the prose — with the card syntax *de-sugared* into normal text (`::` / `:::` become " — ", `?` / `??` join question and answer, and `==…==` / `{{…}}` clozes are restored to their answer). Your configured separators are honored, so this works even if you customized them. Nothing is stripped away — your reading note stays complete.
-3. **The files are cross-linked in frontmatter.** The readable note gets a `Flashcards` property pointing at its deck and an `Origin note` property pointing back at the original; the deck gets an `Origin note` property too. If a note already uses one of those property names, the migrator overwrites it rather than creating a duplicate. Your tags are preserved — the legacy base tag (e.g. `#flashcards`) is translated to your configured Decks tag.
-4. **Reversed cards become two cards.** A `Front ::: Back` card is expanded into a forward card and a swapped card in the **same** deck file, so each direction is scheduled independently.
-5. **Nested structure is flattened into context.** SR treats ancestor headings and nested list bullets as a card's context. Decks captures that whole path into the card's front — e.g. a deeply nested `Function :: Powerhouse` becomes `Cell Anatomy > Mitochondria > … > Function` — rendered at your profile's single header level (a lone note-title H1 is omitted). Pick any level via the preinstalled **Heading 1–6** profiles.
-6. **Smart auto-routing picks the best layout.** Short single-line cards become rows in a compact **table** (no endless scrolling for vocabulary); multi-line cards — with code blocks, lists, or math — become **headers** so their formatting survives. You can override this to *all headers* or *all tables* in the dialog.
-7. **Whole-note reviews migrate too.** Notes you reviewed as a whole (the `#review` tag) become Decks **title-mode** cards (filename = front, the whole note = back) under a dedicated `…/review` profile. Their schedule is read from the note's `sr-*` frontmatter or its end-of-file marker.
-8. **Your scheduling state is translated to FSRS-6.** Decks reads the legacy `<!--SR:-->` metadata — SM-2 (`due, interval, ease`) or already FSRS — and maps it to a stability/difficulty/due state. Reversed cards keep **two separate** histories (reading vs. recall), exactly as the original plugin stored them.
-9. **A review log is written for every migrated card**, so the moment the cards appear in Decks they're already due on the right date with the right interval — you resume, you don't restart.
-
-Pick a profile in the dialog (or use the default) — its header level and scheduling settings are applied to the migrated decks.
-
-## Coming from Anki
-
-Switching from Anki? You can bring your whole collection into Decks **without losing cards, media, or review history** — and keep studying with FSRS-6.
-
-In Anki, export your deck (or whole collection) as a **`.apkg`** (**File → Export**, format *Anki Deck Package*, with **Include media** and **Include scheduling information** checked). Then open the importer from the deck panel toolbar or run the **"Import from Anki"** command, pick the file and a target folder, and import. Both legacy and modern (compressed) `.apkg` exports work.
-
-**Your Anki collection is never touched.** The import is additive: it writes new files into a target folder you choose, nested under the `#decks/anki` tag, and leaves the source `.apkg` as-is. Re-importing the same file overwrites the files it generated and refreshes their media — so you can re-run it any time.
-
-**How it works**
-
-1. **Pick the `.apkg` and a target folder.** Decks unzips it in memory, reads the embedded Anki collection (legacy or the newer compressed format), and copies every referenced media file into a `media/` folder in your vault. The original Anki deck hierarchy (`Parent::Child`) is preserved as folders.
-2. **Every note type becomes a clean Decks card.** Basic notes auto-route between a compact **table** and **headers** (the same smart layout as the rest of Decks); **cloze** deletions become `==…==` highlights — including clozes written inside `$…$` MathJax; **multi-field / templated** notes get an auto-generated template so they render the way you designed them; and Anki **image-occlusion** cards come across as native Decks occlusion.
-3. **Media, math, and tags carry over.** Audio and images are embedded and play / render in review; images keep their original size instead of being blown up; LaTeX/MathJax is preserved; your Anki tags are grouped and sorted into readable sections.
-4. **Your scheduling state is translated to FSRS-6.** Each card's due date, interval, and ease — plus its full Anki review history — are mapped to a stability/difficulty/due state and written as a review log, so cards appear **already due on the right date with the right interval**. You resume, you don't restart.
-5. **Big, media-heavy decks stay smooth.** A large deck is automatically split into capped, subfoldered files — by both card count and number of media embeds — so a deck with thousands of audio clips still opens quickly in Obsidian. Smaller decks stay a single file.
-6. **You watch it happen.** A progress bar tracks each phase — reading the collection, writing decks, copying media, syncing, and importing review history — so even a large import never looks stuck.
-
-Pick a profile in the dialog (or use the default) — its header level and scheduling settings are applied to the imported decks, which nest under the `#decks/anki` tag.
-
-## Release notes & support
-
-- **Release notes** for each version are in [`release-notes/`](./release-notes/).
-- **Discuss on Discord** — [join the server](https://discord.com/channels/686053708261228577/1497268419861418035).
-- **Support development** — [Buy me a coffee](https://www.buymeacoffee.com/dscherdil0).
-- **Translation Guide** - [Translation Guide](./docs/TRANSLATING.md).
-
-## Built on
-
-Decks is built on **[`@decks/core`](https://github.com/dscherdi/decks-core)** — the open-source (AGPL-3.0) engine that implements the parsing, FSRS scheduling, sync log, and AI orchestration. The plugin is the Obsidian-specific shell around it.
-
-## Acknowledgements & alternatives
-
-A huge thank you to the original [Spaced Repetition](https://github.com/st3v3nmw/obsidian-spaced-repetition) plugin by **st3v3nmw**. It pioneered flashcards within Obsidian and remains an excellent choice for users who prefer writing inline `::` cards.
-
-Decks was built as an alternative for users who want a different architectural approach: purely structural Markdown (no special syntax) and conflict-free syncing via a local SQLite database. If you are coming from the original plugin and want to try this approach, use the Decks one-click migrator to bring your cards and review history with you!
+- **[Decks](https://github.com/dscherdi/decks)** by **Xherdi Lika** (`dscherdi`) – the plugin this fork is based on. If you want the real thing, with updates and support, use it.
+- **[`@decks/core`](https://github.com/dscherdi/decks-core)** – the open-source (AGPL-3.0) engine for parsing, FSRS scheduling and sync.
+- **[Spaced Repetition](https://github.com/st3v3nmw/obsidian-spaced-repetition)** by st3v3nmw, which pioneered flashcards in Obsidian.
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 or later** (AGPL-3.0-or-later).
+ReDecks is a modified version of Decks and is therefore licensed under the **GNU Affero General Public License v3.0 or later** (AGPL-3.0-or-later), like the original.
 
-In short: you are free to use, modify, and distribute this software. However, if you modify it and distribute
-your changes — or modify it and offer it to users over a network — you must make your modified source code
-publicly available under the same AGPL-3.0 license.
+In short: you are free to use, modify and distribute this software. If you modify it and distribute your changes, or offer it to users over a network, you must make your modified source code available under the same license.
 
-Copyright (C) 2026 Xherdi Lika. See the [LICENSE](./LICENSE) file for the full text.
+Copyright (C) 2026 Xherdi Lika (original Decks). Modifications for ReDecks by the fork author. See the [LICENSE](./LICENSE) file for the full text.

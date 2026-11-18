@@ -1,11 +1,5 @@
 import { Modal, Component, MarkdownRenderer } from "obsidian";
 import type { App } from "obsidian";
-import type {
-  AiProviderId,
-  RefactorFieldSet,
-  RefactorImage,
-  RefactorResult,
-} from "@decks/core";
 import type { Flashcard } from "../database/types";
 import type { FlashcardEdits, EditResult } from "../services/FlashcardWriter";
 import FlashcardEditModal from "./FlashcardEditModal.svelte";
@@ -13,36 +7,10 @@ import { mount, unmount } from "svelte";
 import type { Svelte5MountedComponent } from "../types/svelte-components";
 import { makeModalResponsive, type ResponsiveModalHandle } from "../utils/responsive-modal";
 
-/** Per-refactor options resolved by the AI drawer (context already built). */
-export interface RefactorUiOptions {
-  instructions?: string;
-  targetKeys?: string[];
-  sourceContext?: string;
-  images?: RefactorImage[];
-  split?: boolean;
-  model?: string;
-}
-
-export interface FlashcardEditAiOptions {
-  /** Persist a tier chosen here — settings no longer offers the control. */
-  onModelChange?: (id: string) => void;
-  aiEnabled: boolean;
-  aiProvider: AiProviderId;
-  defaultModel: string;
-  onRefactor: (
-    current: RefactorFieldSet,
-    options: RefactorUiOptions,
-    signal?: AbortSignal,
-  ) => Promise<RefactorResult>;
-  /** Write a split: replace the card with the given new cards. */
-  onSplit: (cards: RefactorFieldSet[]) => Promise<EditResult>;
-}
-
 export class FlashcardEditModalWrapper extends Modal {
   private card: Flashcard;
   private onSave: (edits: FlashcardEdits) => Promise<EditResult>;
   private onClosed?: () => void;
-  private aiOptions?: FlashcardEditAiOptions;
   private templateColumns: { headers: string[]; cells: string[] } | null;
   private component: Svelte5MountedComponent | null = null;
   private markdownComponents: Component[] = [];
@@ -53,14 +21,12 @@ export class FlashcardEditModalWrapper extends Modal {
     card: Flashcard,
     onSave: (edits: FlashcardEdits) => Promise<EditResult>,
     onClosed?: () => void,
-    aiOptions?: FlashcardEditAiOptions,
     templateColumns?: { headers: string[]; cells: string[] } | null,
   ) {
     super(app);
     this.card = card;
     this.onSave = onSave;
     this.onClosed = onClosed;
-    this.aiOptions = aiOptions;
     this.templateColumns = templateColumns ?? null;
   }
 
@@ -93,18 +59,11 @@ export class FlashcardEditModalWrapper extends Modal {
       target: contentEl,
       props: {
         card: this.card,
-        app: this.app,
         onSave: this.onSave,
         onClose: () => this.close(),
         renderMarkdown: (source: string, el: HTMLElement) => {
           this.renderMarkdown(source, el);
         },
-        aiEnabled: this.aiOptions?.aiEnabled ?? false,
-        aiProvider: this.aiOptions?.aiProvider ?? "openai",
-        defaultModel: this.aiOptions?.defaultModel ?? "",
-        onModelChange: this.aiOptions?.onModelChange ?? ((): void => {}),
-        onRefactor: this.aiOptions?.onRefactor,
-        onSplit: this.aiOptions?.onSplit,
         templateColumns: this.templateColumns,
       },
     }) as Svelte5MountedComponent;

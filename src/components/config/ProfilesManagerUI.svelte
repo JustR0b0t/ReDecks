@@ -32,8 +32,6 @@
   export let initialProfileId: string | undefined = undefined;
   export let allDecks: Deck[] = [];
   export let tagScope: TagScopeOptions | undefined = undefined;
-  /** Offer "By meaning" grading; it stays listed while a profile uses it. */
-  export let meaningAvailable = false;
 
   const scope: TagScopeOptions = tagScope ?? { baseTag: "#decks" };
 
@@ -844,12 +842,10 @@
             .addOption("exact", t.exam.gradingExact)
             .addOption("tolerant", t.exam.gradingTolerant)
             .addOption("self", t.exam.gradingSelf)
-            .then((d) => {
-              if (meaningAvailable || examSettings.typedGrading === "meaning") {
-                d.addOption("meaning", t.exam.gradingMeaning);
-              }
-            })
-            .setValue(examSettings.typedGrading)
+            // Legacy "By meaning" (AI) grading runs as self-grading now.
+            .setValue(
+              examSettings.typedGrading === "meaning" ? "self" : examSettings.typedGrading
+            )
             .onChange((value) => {
               examSettings.typedGrading = value as TypedGradingMode;
             })

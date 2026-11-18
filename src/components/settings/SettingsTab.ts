@@ -7,7 +7,6 @@ import {
   DropdownComponent,
   ButtonComponent,
   normalizePath,
-  getLanguage,
 } from "obsidian";
 import type { DecksSettings } from "../../settings";
 import {
@@ -23,19 +22,10 @@ import type { IDatabaseService } from "@/database/DatabaseFactory";
 import type { FsrsWeightSet } from "@/database/types";
 import { Logger } from "@/utils/logging";
 import { OptimizeFsrsModal } from "./OptimizeFsrsModal";
-import { resolveModelId } from "@/utils/ai-model-options";
 import { docUrl } from "../../utils/docs";
 import {
-  type AiProviderId,
-  DEFAULT_AI_SOURCES_FOLDER,
   DEFAULT_DIRECTORY_MEDIA_FOLDER,
-  DEFAULT_PDF_OCR_FOLDER,
-  DECKS_PRO_DEFAULT_BASE_URL,
-  DECKS_PRO_SITE_URL,
   I18n,
-  type LanguagePreference,
-  PROVIDER_MODELS,
-  SUPPORTED_LANGUAGES,
   parseIgnoredTags,
 } from "@decks/core";
 
@@ -73,9 +63,6 @@ export class DecksSettingTab extends PluginSettingTab {
   private logger: Logger;
   // Cancels an in-progress review-shortcut key capture (only one at a time).
   private cancelShortcutCapture?: () => void;
-  // Tracks when the user explicitly chose "Custom…" in the model picker so the
-  // free-text field stays open even while the typed id matches no preset.
-  private aiModelCustom = false;
   private resyncTemplates: () => Promise<void>;
 
   constructor(
@@ -115,10 +102,6 @@ export class DecksSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     this.addAppBanner(containerEl);
-    this.addProBanner(containerEl);
-
-    // Language
-    this.addLanguageSettings(containerEl);
 
     // Review Session Settings
     this.addReviewSettings(containerEl);
@@ -137,9 +120,6 @@ export class DecksSettingTab extends PluginSettingTab {
 
     // UI Settings
     this.addUISettings(containerEl);
-
-    // AI features
-    this.addAiSettings(containerEl);
 
     // Backup Settings
     this.addBackupSettings(containerEl);
@@ -204,357 +184,6 @@ export class DecksSettingTab extends PluginSettingTab {
       });
   }
 
-  private addAiSettings(containerEl: HTMLElement): void {
-    const s = I18n.t.settings.ai;
-    new Setting(containerEl)
-      .setName(s.heading)
-      .setHeading()
-      .addExtraButton((b) =>
-        b
-          .setIcon("info")
-          .setTooltip(I18n.t.help.docs)
-          .onClick(() => window.open(docUrl("ai"), "_blank"))
-      );
-
-    // The provider/model/key fields render into their own container so toggling
-    // "enabled" (or switching provider) rebuilds ONLY that container instead of
-    // the whole settings tab. The enable toggle leads the block; the container
-    // is appended after it so the provider fields render below.
-    new Setting(containerEl)
-      .setName(s.enabled)
-      .setDesc(s.enabledDesc)
-      .addToggle((toggle) =>
-        toggle.setValue(this.settings.ai.enabled).onChange(async (value) => {
-          if (value === this.settings.ai.enabled) return;
-          this.settings.ai.enabled = value;
-          await this.saveSettings();
-          this.plugin.getDecksView()?.applyAiEnabledUpdate(value);
-          this.renderAiProviderSettings(subContainer);
-        })
-      );
-
-    const subContainer = containerEl.createDiv();
-    this.renderAiProviderSettings(subContainer);
-  }
-
-  private renderAiProviderSettings(containerEl: HTMLElement): void {
-    containerEl.empty();
-    if (!this.settings.ai.enabled) return;
-
-    const s = I18n.t.settings.ai;
-    const provider = this.settings.ai.provider;
-
-    new Setting(containerEl)
-      .setName(s.provider)
-      .setDesc(s.providerDesc)
-      .addDropdown((dd) =>
-        dd
-          .addOption("gemini", s.providerGemini)
-          .addOption("openai", s.providerOpenai)
-          .addOption("claude", s.providerClaude)
-          .addOption("openai-compatible", s.providerLocal)
-          .addOption("decks-pro", s.providerDecksPro)
-          .setValue(provider)
-          .onChange(async (value) => {
-            if (value === this.settings.ai.provider) return;
-            this.settings.ai.provider = value as AiProviderId;
-            await this.saveSettings();
-            // Rebuild only this sub-container (shows/hides the local URL field).
-            this.renderAiProviderSettings(containerEl);
-          })
-      );
-
-    this.renderModelSetting(containerEl, provider);
-
-    if (provider === "openai-compatible") {
-      new Setting(containerEl)
-        .setName(s.localBaseUrl)
-        .setDesc(s.localBaseUrlDesc)
-        .addText((text) =>
-          text
-            .setValue(this.settings.ai.localBaseUrl)
-            .onChange(async (value) => {
-              this.settings.ai.localBaseUrl = value.trim();
-              await this.saveSettings();
-            })
-        );
-    }
-
-
-    // Decks Pro authenticates by signing in; the other providers take an API key.
-    const isPro = provider === "decks-pro";
-    if (isPro) {
-      new Setting(containerEl)
-        .setName(s.pdfReading)
-        .setDesc(s.pdfReadingDesc)
-        .addDropdown((dd) =>
-          dd
-            .addOption("auto", s.pdfReadingAuto)
-            .addOption("transcribe", s.pdfReadingTranscribe)
-            .setValue(this.settings.ai.pdfReading)
-            .onChange(async (value) => {
-              this.settings.ai.pdfReading = value === "transcribe" ? "transcribe" : "auto";
-              await this.saveSettings();
-            })
-        );
-      this.renderDecksProAccount(containerEl);
-      return;
-    }
-
-    // Credential lives in the non-synced AiKeyStore, never in data.json.
-    new Setting(containerEl)
-      .setName(s.apiKey)
-      .setDesc(s.apiKeyDesc)
-      .addText((text) => {
-        text
-          .setPlaceholder(s.apiKeyPlaceholder)
-          .onChange(async (value) => {
-            await this.plugin.aiKeyStore.set(provider, value);
-          });
-        text.inputEl.type = "password";
-        // Block body is required: TextComponent.setValue() returns `this`, and
-        // Obsidian components are thenables (BaseComponent.then). Returning the
-        // component from a .then callback makes the Promise adopt it and recurse
-        // through .then forever (hard freeze). The block returns undefined.
-        void this.plugin.aiKeyStore.get(provider).then((k) => {
-          text.setValue(k);
-        });
-      });
-  }
-
-  /**
-   * Decks Pro account panel. Renders a signed-out prompt or the live account
-   * state (subscription, quota, sign-out), plus the license-key fallback for
-   * customers who bought before accounts existed.
-   */
-  private renderDecksProAccount(containerEl: HTMLElement): void {
-    const s = I18n.t.settings.ai;
-
-    const panel = containerEl.createDiv();
-    const render = () => {
-      panel.empty();
-      void this.renderProAccountInto(panel, render);
-    };
-    render();
-
-    // Development overrides: point the plugin at a locally running site and
-    // worker so the sign-in hand-off can be exercised before deploying. Guarded
-    // by the build-time flag, so these are stripped from release builds.
-    if (__DECKS_DEV__) {
-      new Setting(containerEl)
-        .setName(s.serverUrl)
-        .setDesc(s.serverUrlDesc)
-        .addText((text) =>
-          text
-            .setPlaceholder(DECKS_PRO_DEFAULT_BASE_URL)
-            .setValue(this.settings.ai.proBaseUrl ?? "")
-            .onChange(async (value) => {
-              this.settings.ai.proBaseUrl = value.trim();
-              await this.saveSettings();
-            }),
-        );
-
-      new Setting(containerEl)
-        .setName(s.siteUrl)
-        .setDesc(s.siteUrlDesc)
-        .addText((text) =>
-          text
-            .setPlaceholder(DECKS_PRO_SITE_URL)
-            .setValue(this.settings.ai.proSiteUrl ?? "")
-            .onChange(async (value) => {
-              this.settings.ai.proSiteUrl = value.trim();
-              await this.saveSettings();
-            }),
-        );
-    }
-  }
-
-  private async renderProAccountInto(
-    panel: HTMLElement,
-    rerender: () => void,
-  ): Promise<void> {
-    const s = I18n.t.settings.ai;
-    const auth = this.plugin.decksProAuth;
-    const signedIn = await auth.isSignedIn();
-
-    if (!signedIn) {
-      new Setting(panel)
-        .setName(s.account)
-        .setDesc(s.accountSignedOut)
-        .addButton((button) =>
-          button
-            .setButtonText(s.signIn)
-            .setCta()
-            .onClick(() => {
-              auth.startSignIn(this.plugin.app.vault.getName());
-              new Notice(s.signInPending);
-            }),
-        )
-        .addButton((button) =>
-          button
-            .setButtonText(s.subscribe)
-            .onClick(() => window.open(auth.pricingUrl(), "_blank")),
-        );
-      return;
-    }
-
-    const account = new Setting(panel).setName(s.account).setDesc(s.accountLoading);
-    account.addButton((button) =>
-      button.setButtonText(s.accountRefresh).onClick(() => rerender()),
-    );
-    account.addButton((button) =>
-      button.setButtonText(s.signOut).onClick(async () => {
-        await auth.signOut();
-        new Notice(s.signOutDone);
-        rerender();
-      }),
-    );
-
-    const data = await auth.fetchAccount();
-    if (!data) {
-      account.setDesc(s.accountError);
-      return;
-    }
-
-    account.setDesc(
-      data.user.email
-        ? I18n.format(s.accountSignedInAs, { email: data.user.email })
-        : s.accountSignedIn,
-    );
-
-    const statusLabels: Record<string, string> = {
-      active: s.subscriptionActive,
-      on_trial: s.subscriptionTrial,
-      past_due: s.subscriptionPastDue,
-      cancelled: s.subscriptionCancelled,
-      expired: s.subscriptionExpired,
-      paused: s.subscriptionPaused,
-    };
-
-    // A trial user has no subscription row yet — say which state they're in
-    // rather than showing a bare "no subscription".
-    const subscriptionDesc = data.subscription
-      ? (statusLabels[data.subscription.status] ?? data.subscription.status)
-      : data.trial?.exhausted
-        ? s.trialExhausted
-        : data.trial?.on_trial
-          ? s.trialActive
-          : s.subscriptionNone;
-
-    const subscription = new Setting(panel)
-      .setName(s.subscriptionStatus)
-      .setDesc(subscriptionDesc);
-    if (data.subscription) {
-      subscription.addButton((button) =>
-        button
-          .setButtonText(s.manageSubscription)
-          .onClick(() =>
-            window.open(
-              data.subscription?.customer_portal_url ?? auth.accountUrl(),
-              "_blank",
-            ),
-          ),
-      );
-    } else {
-      subscription.addButton((button) =>
-        button
-          .setButtonText(s.subscribe)
-          .setCta()
-          .onClick(() => window.open(auth.pricingUrl(), "_blank")),
-      );
-    }
-  }
-
-
-  // The local (openai-compatible) provider keeps a free-text model field since
-  // its ids depend on the running server; hosted providers get a curated
-  // dropdown plus a "Custom…" option that reveals a free-text field.
-  private renderModelSetting(
-    containerEl: HTMLElement,
-    provider: AiProviderId,
-  ): void {
-    const s = I18n.t.settings.ai;
-    const current = this.settings.ai.models[provider] ?? "";
-
-    if (provider === "openai-compatible") {
-      new Setting(containerEl)
-        .setName(s.model)
-        .setDesc(s.modelDesc)
-        .addText((text) =>
-          text.setValue(current).onChange(async (value) => {
-            this.settings.ai.models[provider] = value.trim();
-            await this.saveSettings();
-          }),
-        );
-      return;
-    }
-
-    const CUSTOM = "__custom__";
-    const presets = PROVIDER_MODELS[provider];
-    // Decks Pro exposes generation *tiers* (no raw model / custom field); the
-    // dropdown is labelled "Tier".
-    const isPro = provider === "decks-pro";
-    const allowCustom = !isPro;
-    this.settings.ai.customModel ??= {};
-    const isCustom = allowCustom && (this.settings.ai.customModel[provider] ?? false);
-
-    // Retirement: a non-custom stored id that is no longer offered (a model we
-    // removed in an update) falls back to the first preset; persist so saved
-    // state matches the dropdown.
-    const selectedId = resolveModelId(provider, current, isCustom);
-    if (selectedId !== current) {
-      this.settings.ai.models[provider] = selectedId;
-      this.settings.ai.customModel[provider] = false;
-      void this.saveSettings();
-    }
-
-    // Decks Pro has no tier control here: the choice belongs next to the work,
-    // and every AI modal already offers it. This row is left as a pointer to
-    // what the tiers mean, with no duplicate control to drift out of sync.
-    if (isPro) {
-      const proSetting = new Setting(containerEl).setName(s.tier).setDesc(s.tierDesc);
-      proSetting.descEl.createEl("br");
-      proSetting.descEl.createEl("a", {
-        text: "decksmd.app/docs/ai-tiers",
-        href: "https://decksmd.app/docs/ai-tiers/",
-      });
-      return;
-    }
-
-    new Setting(containerEl)
-      .setName(s.model)
-      .setDesc(s.modelDesc)
-      .addDropdown((dd) => {
-        for (const m of presets) dd.addOption(m.id, m.name);
-        if (allowCustom) dd.addOption(CUSTOM, s.modelCustom);
-        dd.setValue(isCustom ? CUSTOM : selectedId);
-        dd.onChange(async (value) => {
-          this.settings.ai.customModel ??= {};
-          if (value === CUSTOM) {
-            this.settings.ai.customModel[provider] = true;
-            await this.saveSettings();
-            this.renderAiProviderSettings(containerEl);
-            return;
-          }
-          this.settings.ai.customModel[provider] = false;
-          this.settings.ai.models[provider] = value;
-          await this.saveSettings();
-          this.renderAiProviderSettings(containerEl);
-        });
-      });
-
-    if (isCustom) {
-      new Setting(containerEl)
-        .setName(s.modelCustomLabel)
-        .addText((text) =>
-          text.setValue(current).onChange(async (value) => {
-            this.settings.ai.models[provider] = value.trim();
-            await this.saveSettings();
-          }),
-        );
-    }
-  }
-
   private addAppBanner(containerEl: HTMLElement): void {
     const banner = containerEl.createDiv({ cls: "decks-pro-banner decks-app-banner" });
     const text = banner.createDiv({ cls: "decks-pro-banner-text" });
@@ -572,45 +201,6 @@ export class DecksSettingTab extends PluginSettingTab {
       });
       link.createEl("img", { attr: { src: store.src, alt: store.label, height: "40" } });
     }
-  }
-
-  private addProBanner(containerEl: HTMLElement): void {
-    const banner = containerEl.createDiv({ cls: "decks-pro-banner" });
-    const text = banner.createDiv({ cls: "decks-pro-banner-text" });
-    text.createDiv({ cls: "decks-pro-banner-title", text: I18n.t.pro.heading });
-    text.createDiv({ cls: "decks-pro-banner-body", text: I18n.t.pro.body });
-    banner.createEl("a", {
-      cls: "decks-pro-banner-cta",
-      text: I18n.t.pro.cta,
-      attr: { href: `${DECKS_PRO_SITE_URL}/pricing/` },
-    });
-  }
-
-  private addLanguageSettings(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName(I18n.t.settings.language.heading).setHeading();
-
-    new Setting(containerEl)
-      .setName(I18n.t.settings.language.name)
-      .setDesc(I18n.t.settings.language.desc)
-      .addDropdown((dropdown) => {
-        dropdown.addOption("auto", I18n.t.settings.language.auto);
-        for (const lang of SUPPORTED_LANGUAGES) {
-          dropdown.addOption(lang.code, lang.label);
-        }
-        dropdown
-          .setValue(this.settings.i18n?.language ?? "auto")
-          .onChange(async (value) => {
-            this.settings.i18n = { language: value as LanguagePreference };
-            await this.saveSettings();
-            // Re-resolve language and re-render this settings tab immediately,
-            // so the user sees the change confirmed in the new language.
-            // Other already-mounted views (deck list, review modal, commands)
-            // still need a plugin reload to pick it up.
-            I18n.init(this.settings, getLanguage());
-            new Notice(I18n.t.notices.languageChanged);
-            this.display();
-          });
-      });
   }
 
   private addPathsSettings(containerEl: HTMLElement): void {
@@ -682,19 +272,6 @@ export class DecksSettingTab extends PluginSettingTab {
       .catch((error: unknown) => console.debug("Card identity status unavailable", error));
 
     new Setting(containerEl)
-      .setName(I18n.t.settings.paths.pdfCacheFolder)
-      .setDesc(I18n.format(I18n.t.settings.paths.pdfCacheFolderDesc, { folder: DEFAULT_PDF_OCR_FOLDER }))
-      .addText((text) =>
-        text
-          .setPlaceholder(DEFAULT_PDF_OCR_FOLDER)
-          .setValue(this.settings.paths.pdfCacheFolder)
-          .onChange(async (value) => {
-            this.settings.paths.pdfCacheFolder = value.trim();
-            await this.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
       .setName(I18n.t.settings.paths.directoryMediaFolder)
       .setDesc(I18n.format(I18n.t.settings.paths.directoryMediaFolderDesc, { folder: DEFAULT_DIRECTORY_MEDIA_FOLDER }))
       .addText((text) =>
@@ -703,19 +280,6 @@ export class DecksSettingTab extends PluginSettingTab {
           .setValue(this.settings.paths.directoryMediaFolder)
           .onChange(async (value) => {
             this.settings.paths.directoryMediaFolder = value.trim();
-            await this.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName(I18n.t.settings.paths.aiSourcesFolder)
-      .setDesc(I18n.format(I18n.t.settings.paths.aiSourcesFolderDesc, { folder: DEFAULT_AI_SOURCES_FOLDER }))
-      .addText((text) =>
-        text
-          .setPlaceholder(DEFAULT_AI_SOURCES_FOLDER)
-          .setValue(this.settings.paths.aiSourcesFolder)
-          .onChange(async (value) => {
-            this.settings.paths.aiSourcesFolder = value.trim();
             await this.saveSettings();
           })
       );

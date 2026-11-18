@@ -27,7 +27,9 @@ const outDir = prod
 const srcDir = path.join(__dirname, "src");
 // Resolve @decks/core to its TypeScript source (like jest does) so the bundle
 // never depends on a pre-built packages/decks-core/dist — no build ordering.
-const DECKS_CORE = path.join(
+// Outside the monorepo that path is absent; then the installed
+// node_modules/@decks/core package is used instead.
+const DECKS_CORE_SRC = path.join(
   __dirname,
   "..",
   "..",
@@ -36,6 +38,7 @@ const DECKS_CORE = path.join(
   "src",
   "index.ts",
 );
+const coreAlias = fs.existsSync(DECKS_CORE_SRC) ? { "@decks/core": DECKS_CORE_SRC } : {};
 
 // Ensure output directory exists
 if (!fs.existsSync(outDir)) {
@@ -50,7 +53,7 @@ console.log(
 const workerBuildOptions = {
   entryPoints: [path.join(srcDir, "workers", "worker-entry.ts")],
   bundle: true,
-  alias: { "@decks/core": DECKS_CORE },
+  alias: coreAlias,
   format: "iife",
   target: "es2019",
   platform: "browser",
@@ -65,7 +68,7 @@ const buildOptions = {
   },
   entryPoints: [path.join(srcDir, "main.ts")],
   bundle: true,
-  alias: { "@decks/core": DECKS_CORE },
+  alias: coreAlias,
   external: [
     "obsidian",
     "electron",
@@ -173,7 +176,7 @@ Promise.all([esbuild.build(workerBuildOptions), esbuild.build(buildOptions)])
 
     // Inject release notes for the current minor version series into bundle
     const releaseNotesDir = path.join(__dirname, "release-notes");
-    const allNotes = fs.readdirSync(releaseNotesDir)
+    const allNotes = (fs.existsSync(releaseNotesDir) ? fs.readdirSync(releaseNotesDir) : [])
       .filter((f) => f.endsWith(".md"))
       .map((filename) => ({
         version: filename.replace(".md", "").replace(/-/g, "."),

@@ -249,20 +249,6 @@ describe("the panel's deck list after an event that changes which decks exist", 
     expect(panel.fileRows()).toEqual([]);
   });
 
-  it("lists the deck created for generated cards", async () => {
-    const { plugin, panel } = await paintedHarness([deckRow("French.md", 3)]);
-
-    const deckId = await DecksPlugin.prototype["registerGeneratedDeck"].call(
-      plugin,
-      "AI/Generated.md",
-      "#decks",
-      "",
-    );
-
-    expect(deckId).toBe(generateDeckId("AI/Generated.md"));
-    expect(panel.fileRows()).toEqual(["AI/Generated.md (2)", "French.md (3)"]);
-  });
-
   it("follows the decks another device left in the database file", async () => {
     const { plugin, db, panel } = await paintedHarness([deckRow("French.md", 3)]);
     db.onDisk = [deckRow("German.md", 4), deckRow("Italian.md", 1)];

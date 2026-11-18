@@ -1,9 +1,8 @@
 <script lang="ts">
   // Presentational "seamless stack" card: one elevated container on the main
   // background holding labeled zones separated by thin lines. The body of each
-  // zone is supplied by the parent via the default slot (`let:z`), so the same
-  // card serves the editor (textareas / preview) and AI suggestions (proposed
-  // text). All behavior lives in the parent.
+  // zone is supplied by the parent via the default slot (`let:z`).
+  // All behavior lives in the parent.
   interface FieldStackZone {
     key: string;
     label?: string;

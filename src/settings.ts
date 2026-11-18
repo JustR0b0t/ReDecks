@@ -1,9 +1,7 @@
 import {
-  type AiProviderId,
   type DpkgManifestDraft,
   type DpkgPublisher,
   type ExamSettings,
-  type LanguagePreference,
   DEFAULT_EXAM_SETTINGS,
 } from "@decks/core";
 import {
@@ -21,9 +19,6 @@ export type DeckListSortMode =
 
 // Deck list layout: the nested folder tree or a flat list (sections kept).
 export type DeckListView = "tree" | "flat";
-
-/** How the hosted provider reads an attached PDF. */
-export type PdfReading = "auto" | "transcribe";
 
 /** What the author fills in when exporting a deck, or a folder of decks, as a .dpkg package. */
 export type DirectoryExportDetails = Pick<
@@ -94,8 +89,6 @@ export interface DecksSettings {
     // Per-column widths (in pixels) for the flashcard manager table.
     // Empty object means use defaults from the grid template.
     managerColumnWidths: Record<string, number>;
-    // Width (px) of the AI generator's PDF pane; unset uses the default.
-    aiPdfPaneWidth?: number;
     // Plugin version whose release notes have been shown. Empty means they
     // never have been, which is also true of a fresh install.
     lastSeenVersion: string;
@@ -129,42 +122,16 @@ export interface DecksSettings {
     // Folder for the per-device .deckssynclog files. Default: vault root.
     // Changes require a restart to take effect.
     syncLogFolder: string;
-    // Folder holding cached per-page PDF OCR text (reused across runs so the
-    // same PDF is never OCR'd twice). Default: "Decks OCR" at the vault root.
-    pdfCacheFolder: string;
     // Media of deck directory packages, shared with the DecksMD app. Default: "Decks media".
     directoryMediaFolder: string;
-    // Copies of the PDFs attached to AI sessions. Default: "Decks AI sources".
+    // Unused since the AI features were removed; kept because @decks/core's
+    // settings type still requires the field.
     aiSourcesFolder: string;
   };
 
-  // Internationalization
+  // Internationalization. English is the only bundled UI language.
   i18n: {
-    language: LanguagePreference; // "auto" follows Obsidian's getLanguage()
-  };
-
-  // AI features (global). Refactor prompts are per-DeckProfile; this section is
-  // the global toggle + active provider/model. API keys are NOT stored here —
-  // they live in a separate non-synced file (see AiKeyStore) so secrets never
-  // land in data.json.
-  ai: {
-    enabled: boolean;
-    provider: AiProviderId;
-    models: Record<AiProviderId, string>;
-    // True when the stored model for a provider is an intentional free-text
-    // custom value (vs a curated preset). Lets us reset retired presets to the
-    // default while preserving genuine custom entries.
-    customModel: Partial<Record<AiProviderId, boolean>>;
-    localBaseUrl: string; // for the openai-compatible provider
-    // "auto" reads a PDF page's text layer where it is clean and transcribes the rest.
-    pdfReading: PdfReading;
-    // Development overrides for the hosted provider. Blank uses the defaults
-    // baked into core; set them to run against a local site/worker.
-    proBaseUrl: string;
-    proSiteUrl: string;
-    // Stable id for this install, minted on first sign-in. Survives signing out,
-    // so re-linking replaces this device's entry instead of adding another.
-    deviceId: string;
+    language: "en";
   };
 
   // Table template engine. Templates are authored as markdown files inside
@@ -251,31 +218,12 @@ export const DEFAULT_SETTINGS: DecksSettings = {
     dbFolder: "",
     backupFolder: "",
     syncLogFolder: "",
-    pdfCacheFolder: "",
     directoryMediaFolder: "",
     aiSourcesFolder: "",
   },
 
   i18n: {
-    language: "auto",
-  },
-
-  ai: {
-    enabled: false,
-    provider: "openai",
-    models: {
-      gemini: "gemini-3.5-flash",
-      openai: "gpt-5.4-mini",
-      claude: "claude-haiku-4-5-20251001",
-      "openai-compatible": "gemma3",
-      "decks-pro": "decks-tier-fast",
-    },
-    customModel: {},
-    localBaseUrl: "http://localhost:11434/v1",
-    pdfReading: "auto",
-    proBaseUrl: "",
-    proSiteUrl: "",
-    deviceId: "",
+    language: "en",
   },
 
   templates: {

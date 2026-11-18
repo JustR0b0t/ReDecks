@@ -105,4 +105,3 @@ files stay — they are the release body on GitHub.
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — how to propose a change
 - [INTEGRATION_TESTING_GUIDE.md](./INTEGRATION_TESTING_GUIDE.md) — testing strategy
-- [TRANSLATING.md](./TRANSLATING.md) — adding or fixing a locale

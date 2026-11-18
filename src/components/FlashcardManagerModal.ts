@@ -37,7 +37,6 @@ export class FlashcardManagerModal extends Modal {
   private initialColumnWidths: Record<string, number>;
   private onColumnWidthsChange?: (widths: Record<string, number>) => void;
   private onEditCard?: (card: Flashcard) => Promise<void>;
-  private onBatchRefactor?: (cards: Flashcard[]) => Promise<void>;
   private settings?: DecksSettings;
 
   constructor(
@@ -52,7 +51,6 @@ export class FlashcardManagerModal extends Modal {
     onColumnWidthsChange?: (widths: Record<string, number>) => void,
     onEditCard?: (card: Flashcard) => Promise<void>,
     settings?: DecksSettings,
-    onBatchRefactor?: (cards: Flashcard[]) => Promise<void>,
   ) {
     super(app);
     this.db = db;
@@ -65,7 +63,6 @@ export class FlashcardManagerModal extends Modal {
     this.onColumnWidthsChange = onColumnWidthsChange;
     this.onEditCard = onEditCard;
     this.settings = settings;
-    this.onBatchRefactor = onBatchRefactor;
   }
 
   onOpen() {
@@ -90,8 +87,6 @@ export class FlashcardManagerModal extends Modal {
         initialColumnWidths: this.initialColumnWidths,
         onColumnWidthsChange: this.onColumnWidthsChange ?? null,
         onEditCard: this.onEditCard ?? null,
-        aiEnabled: this.settings?.ai.enabled ?? false,
-        onBatchRefactor: this.onBatchRefactor ?? null,
         onCommitEdit: async (
           target: EditTarget,
           payload: EditCommitPayload

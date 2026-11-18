@@ -445,28 +445,6 @@
   max-height: 85vh;
 }
 
-/*
- * The batch refactor modal is a split-pane workspace — wider on desktop.
- *
- * Side panels are ADDED to the width rather than taken out of it. Each is a
- * fixed flex-basis, so a modal that cannot grow shrinks the generator pane until
- * its own list/detail split collapses — which is what a maximised window used to
- * do the moment the PDF panel opened.
- *
- * The panel widths live here and are consumed by the panels themselves, so the
- * sum below can never drift from what is actually on screen.
- */
-.decks-ai-batch-modal {
-  --decks-pane-chapters: 280px;
-  --decks-pane-debug: 340px;
-  --decks-gen-panes: 0px;
-  width: 90vw;
-  max-width: calc(1100px + var(--decks-gen-panes));
-}
-
-/* The generator is a workspace leaf now, never a modal, so it no longer widens
-   one. .decks-ai-batch-modal itself stays: the batch refactor modal uses it. */
-
 /* Two classes, so the insets outrank the app's own phone padding for .modal. */
 .modal.decks-modal-mobile {
   height: 100% !important;
@@ -506,8 +484,7 @@
     .decks-statistics-title-row,
     .decks-pm-titlebar,
     .decks-edit-header,
-    .decks-occlusion-studio-header,
-    .decks-ai-batch-header
+    .decks-occlusion-studio-header
   ) {
   --decks-modal-close-top: 12px;
 }
@@ -550,7 +527,6 @@
 .modal.decks-modal-mobile .decks-statistics-title-row,
 .modal.decks-modal-mobile .decks-pm-titlebar,
 .modal.decks-modal-mobile .decks-occlusion-studio-header,
-.modal.decks-modal-mobile .decks-ai-batch-header,
 .modal.decks-modal-mobile .decks-anki-export-ui > h2:first-child,
 .modal.decks-modal-mobile .decks-sr-migration-body > h2:first-child {
   padding-inline-end: var(--decks-modal-close-room);
@@ -899,92 +875,6 @@ div.decks-card-content
   border-radius: 4px;
   font-size: 0.85em;
   white-space: pre-wrap;
-}
-
-/* AI generator: footer button that toggles the destination form */
-/* The workbench's pile in Obsidian's status bar. */
-.decks-ai-status {
-  display: inline-flex;
-  gap: 6px;
-  cursor: pointer;
-}
-.decks-ai-status-warn {
-  color: var(--color-yellow);
-}
-
-/* Segmented control (new-file / append) */
-.decks-seg {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  margin-bottom: 10px;
-  background: var(--background-secondary-alt);
-  border-radius: var(--radius-m);
-}
-.decks-seg-btn {
-  flex: 1;
-  padding: 6px 10px;
-  border: none;
-  box-shadow: none;
-  border-radius: calc(var(--radius-m) - 2px);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-}
-.decks-seg-btn:hover {
-  color: var(--text-normal);
-}
-.decks-seg-btn.is-active {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-  font-weight: var(--font-medium);
-}
-.decks-seg-btn.is-active:hover {
-  color: var(--text-on-accent);
-}
-
-/* Searchable deck field — looks like an input, opens the fuzzy picker */
-.decks-ai-gen-deck-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: var(--size-4-1) var(--size-4-2);
-  text-align: left;
-  background: var(--background-modifier-form-field);
-  border: none;
-  border-radius: var(--radius-s);
-  color: var(--text-normal);
-  cursor: pointer;
-}
-.decks-ai-gen-deck-search:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--interactive-accent);
-}
-.decks-ai-gen-deck-search .is-placeholder {
-  color: var(--text-faint);
-}
-.decks-deck-search-icon {
-  display: inline-flex;
-  color: var(--text-muted);
-}
-
-/* Destination form inputs — borderless with a soft resting fill (global so it
-   wins over Obsidian's default input/select styling). */
-.decks-ai-gen-save-row input,
-.decks-ai-gen-save-row select {
-  width: 100%;
-  border: none;
-  background: var(--background-modifier-form-field);
-  border-radius: var(--radius-s);
-  padding: var(--size-4-1) var(--size-4-2);
-}
-.decks-ai-gen-save-row input:focus,
-.decks-ai-gen-save-row select:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
 /* Table template engine: settings editor + card viewer */
@@ -1558,7 +1448,7 @@ div.decks-card-content
   filter: brightness(1.1);
 }
 
-/* Decks Pro banner — settings header and release-notes tab. */
+/* Banner frame (the mobile-app banner at the top of settings uses it). */
 .decks-pro-banner {
   display: flex;
   flex-wrap: wrap;
@@ -1585,23 +1475,7 @@ div.decks-card-content
   line-height: 1.45;
   color: var(--text-muted);
 }
-.decks-pro-banner-cta {
-  flex: 0 0 auto;
-  padding: 6px 14px;
-  border-radius: 6px;
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  font-size: 0.85em;
-  font-weight: 600;
-  text-decoration: none;
-}
-.decks-pro-banner-cta:hover {
-  background-color: var(--interactive-accent-hover);
-  color: var(--text-on-accent);
-}
-
-/* The app banner reuses the Pro banner's frame; its call to action is the two
-   store badges rather than a text link. */
+/* The app banner's call to action is the two store badges. */
 .decks-app-banner {
   margin-bottom: 12px;
 }

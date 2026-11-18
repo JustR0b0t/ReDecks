@@ -15,7 +15,6 @@ import type {
 } from "../../types/svelte-components";
 import FlashcardReviewModal from "./FlashcardReviewModal.svelte";
 import { mount, unmount } from "svelte";
-import { reviewRepairProps, type ReviewRepairHooks } from "./review-repair-props";
 import { navigateToFlashcardSource } from "../../utils/flashcard-navigator";
 import { wireInternalLinks } from "../../utils/internal-links";
 import { renderableCardMarkdown, renderSourcePath, directoryEmbedUrl } from "../../services/directory-render";
@@ -77,8 +76,7 @@ export class FlashcardReviewModalWrapper extends Modal {
     refreshStats: () => Promise<void>,
     refreshStatsById: (deckId: string) => Promise<void>,
     browseMode = false,
-    cramMode = false,
-    private repairHooks?: ReviewRepairHooks
+    cramMode = false
   ) {
     super(app);
     this.deckOrGroup = deckOrGroup;
@@ -210,7 +208,6 @@ export class FlashcardReviewModalWrapper extends Modal {
     this.component = mount(FlashcardReviewModal, {
       target: contentEl,
       props: {
-        ...reviewRepairProps(this.repairHooks),
         initialCard: this.initialCard,
         deckOrGroup: this.deckOrGroup,
         browseMode: this.browseMode,
